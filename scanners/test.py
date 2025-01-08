@@ -2,7 +2,7 @@ from scanners.scanner import Scanner
 from utils.SerialiseJson import JsonSerializable
 import json
 
-file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\11_30a-_9Z_dwl_DWL_WIRE_238615014.las'
+file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\KAWANG-1_8_5_RCI-GR_2-AUG-2009 (1).DLIS'
 
 
 scanner = Scanner(file_full_path)
