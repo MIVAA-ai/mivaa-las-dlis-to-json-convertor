@@ -10,6 +10,7 @@ from pathlib import Path
 from pydantic import ValidationError
 from mappings.JSONWellLogFormat import JsonWellLogFormat
 import numpy as np
+
 class LasScanner:
     def __init__(self, file):
         self._file = file
