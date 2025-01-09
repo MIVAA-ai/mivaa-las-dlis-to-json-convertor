@@ -19,7 +19,7 @@ class DLISOriginsProcessor:
         self._logical_file_id = logical_file_id
         self._origins = origins
 
-    def extract_origins(self):
+    def _extract_origins(self):
         """
         Extracts and processes origins into a DataFrame.
 
@@ -50,7 +50,7 @@ class DLISOriginsProcessor:
             print(f"Error while extracting origins for logical file {self._logical_file_id}: {e}")
             raise
 
-    def map_headers(self, origins_df):
+    def map_headers(self):
         """
         Maps the extracted origins to the header mapping.
 
@@ -61,6 +61,7 @@ class DLISOriginsProcessor:
             dict: A dictionary containing the transformed metadata.
         """
         try:
+            origins_df = self._extract_origins()
             header_mapping = HeaderMapping.get_default_mapping()
             header = {}
 

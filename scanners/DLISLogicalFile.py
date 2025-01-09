@@ -28,11 +28,8 @@ class DLISLogicalFile:
                 origins=self._logical_file.origins
             )
 
-            # Extract origins
-            origins_df = origins_processor.extract_origins()
-
             # Map headers
-            header = origins_processor.map_headers(origins_df)
+            header = origins_processor.map_headers()
 
             # Pretty print the JSON output
             print(json.dumps(header, indent=4))
