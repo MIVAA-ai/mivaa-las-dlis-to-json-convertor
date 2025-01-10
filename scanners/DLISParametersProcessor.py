@@ -23,45 +23,48 @@ class DLISParametersProcessor:
         """
         Converts a DLIS parameters DataFrame into the desired JSON-like format.
 
-        Args:
-            param_df (pd.DataFrame): DataFrame containing DLIS parameters with columns
-                                     ['name', 'value', 'unit', 'description'].
-
         Returns:
             dict: Parameter information formatted as specified.
         """
-        #reading the parameters in dataframe
+        # Read the parameters into a DataFrame
         param_df = self._extract_parameters_df()
+
+        # Exclude 'name' and 'logical-file-id' from attributes
+        attributes = [col for col in param_df.columns if col not in ('name', 'logical-file-id')]
 
         # Initialize the structure for parameter information
         parameter_info = {
-            "attributes": ["value", "unit", "description"],
+            "attributes": attributes,
             "objects": {}
         }
 
         # Loop through the DataFrame rows
         for _, row in param_df.iterrows():
-            # Extract parameter information
+            # Extract parameter name and trim spaces
             name = row["name"]
-            value = row["value"]
-            unit = row["unit"]
-            description = row.get("description", None)  # Handle missing descriptions
-
-            # Trim spaces in the name, unit, description
             name = name.strip() if isinstance(name, str) else name
-            unit = unit.strip() if isinstance(unit, str) else unit
-            description = description.strip() if isinstance(description, str) else description
 
-            # Format value as string and trim spaces
-            if isinstance(value, list):
-                value = ", ".join(map(str.strip, value))  # Trim spaces in each element and join
-            elif isinstance(value, (np.ndarray, tuple)):
-                value = ", ".join(map(str.strip, value))  # Trim spaces in each element and join
-            else:
-                value = str(value).strip() if value is not None else None
+            # Initialize a list to hold attribute values
+            attribute_values = []
+
+            for attr in attributes:
+                value = row.get(attr)
+
+                # Trim spaces if value is a string
+                if isinstance(value, str):
+                    value = value.strip()
+                # If value is a list or array, process accordingly
+                elif isinstance(value, (list, np.ndarray, tuple)):
+                    # Trim spaces in each element and join
+                    value = ", ".join(map(lambda x: str(x).strip(), value))
+                else:
+                    value = str(value).strip() if value is not None else None
+
+                # Append the processed value to the attribute_values list
+                attribute_values.append(value)
 
             # Add parameter to the objects section
-            parameter_info["objects"][name] = [value, unit, description]
+            parameter_info["objects"][name] = attribute_values
 
         return parameter_info
 
@@ -87,19 +90,16 @@ class DLISParametersProcessor:
             # Add logical file ID
             param_df["logical-file-id"] = self._logical_file_id
 
-            # Transform parameter values
-            param_df["value"] = param_df.apply(self._transform_values, axis=1)
-
-            # Remove rows with null values
-            param_df = param_df[~param_df.isin(self._nulls_list).any(axis=1)]
-
-            # Convert 'value' to a hashable type
+            # Transform parameter values. Convert 'value' to a hashable type
             param_df["value"] = param_df["value"].apply(
                 lambda v:
                 v[0] if isinstance(v, (list, np.ndarray)) and len(v) == 1 else
                 "; ".join(v) if isinstance(v, (list, np.ndarray)) else
                 v
             )
+
+            # Remove rows with null values
+            param_df = param_df[~param_df.isin(self._nulls_list).any(axis=1)]
 
             # Clean and deduplicate the DataFrame
             param_df = param_df.drop_duplicates(ignore_index=True)
@@ -130,20 +130,3 @@ class DLISParametersProcessor:
             except KeyError:
                 units_column.append(None)
         return units_column
-
-    @staticmethod
-    def _transform_values(row):
-        """
-        Transforms the 'value' column in the DataFrame.
-
-        Args:
-            row (pd.Series): A row from the DataFrame.
-
-        Returns:
-            Any: Transformed value for the row.
-        """
-        if isinstance(row["value"], list):
-            if len(row["value"]) == 1:
-                return row["value"][0]
-            return row["value"]
-        return row["value"]

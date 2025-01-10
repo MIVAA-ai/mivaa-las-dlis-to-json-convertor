@@ -48,7 +48,7 @@ class DLISLogicalFile:
             parameters = parameters_processor.extract_parameters()
             print(json.dumps(parameters, indent=4))
 
-            refactor dlis parameters first
+            # refactor dlis parameters first
             # # tools_processor = DLISToolsProcessor(
             # #     logical_file_id=self._logical_file_id,
             # #     tools=self._logical_file.tools
