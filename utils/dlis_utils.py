@@ -109,3 +109,45 @@ def extract_units(metadata, metadata_df, column_name):
             units_column.append(None)
 
     return units_column  # Return the list of extracted units
+
+# def extract_units(metadata, metadata_df, column_name):
+#     """
+#     Extracts units for a specific equipment attribute and aligns them with the DataFrame index.
+#
+#     Args:
+#         metadata (list): List of metadata objects containing equipment details.
+#         metadata_df (pd.DataFrame): DataFrame containing equipment data.
+#         column_name (str): The attribute name for which units are to be extracted.
+#
+#     Returns:
+#         list: A list of units corresponding to the values in the specified column.
+#     """
+#     units_column = []  # Initialize a list to store the extracted units
+#
+#     # Iterate through the metadata objects
+#     for i, param in enumerate(metadata):
+#         # Skip entries not present in the DataFrame's index
+#         if i not in metadata_df.index:
+#             continue
+#
+#         try:
+#             # Extract the unit for the given column from the metadata object
+#             unit = param.attic[column_name].units
+#
+#             # Attempt to decode the unit if it's in bytes format
+#             if isinstance(unit, bytes):
+#                 try:
+#                     unit = unit.decode('utf-8').strip()
+#                 except UnicodeDecodeError:
+#                     # Fallback for undecodable bytes
+#                     unit = None
+#
+#             units_column.append(unit)
+#         except KeyError:
+#             # If the unit is not found, append None
+#             units_column.append(None)
+#         except AttributeError:
+#             # Handle cases where the 'attic' or column_name might not exist
+#             units_column.append(None)
+#
+#     return units_column  # Return the list of extracted units
