@@ -1,5 +1,3 @@
-from symbol import parameters
-
 from DLISOriginsProcessor import DLISOriginsProcessor
 import json
 from DLISParametersProcessor import DLISParametersProcessor
@@ -42,7 +40,8 @@ class DLISLogicalFile:
 
             parameters_processor = DLISParametersProcessor(
                 logical_file_id=self._logical_file_id,
-                parameters=self._logical_file.parameters
+                items=self._logical_file.parameters
+                # parameters=self._logical_file.parameters
             )
 
             parameters = parameters_processor.extract_parameters()
@@ -56,13 +55,14 @@ class DLISLogicalFile:
             # #
             # # tools_processor.extract_tools()
             #
-            # equipments_processor = DLISEquipmentsProcessor(
-            #     logical_file_id=self._logical_file_id,
-            #     equipments=self._logical_file.equipments
-            # )
-            #
-            # equipments = equipments_processor.extract_equipments()
-            # print(json.dumps(equipments, indent=4))
+            equipments_processor = DLISEquipmentsProcessor(
+                logical_file_id=self._logical_file_id,
+                items=self._logical_file.equipments
+                # equipments=self._logical_file.equipments
+            )
+
+            equipments = equipments_processor.extract_equipments()
+            print(json.dumps(equipments, indent=4))
 
         except Exception as e:
             print(f"Error scanning logical file {self._logical_file_id}: {e}")
