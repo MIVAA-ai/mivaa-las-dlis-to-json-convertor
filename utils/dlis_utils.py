@@ -77,6 +77,42 @@ def extract_metadata(metadata_df):
     # Return the structured metadata information
     return metadata_info
 
+def extract_relationships(metadata_df, column_name):
+    """
+    Extracts relationships (e.g., channels) from the specified column in the metadata DataFrame
+    and transposes the data to match the number of rows in the DataFrame.
+
+    Args:
+        metadata_df (pd.DataFrame): DataFrame containing frames and their attributes.
+        column_name (str): The name of the column containing the channels information.
+
+    Returns:
+        pd.Series: A Series with lists of channels for each row, aligned with metadata_df rows.
+    """
+    # Ensure the column exists in the DataFrame
+    if column_name not in metadata_df.columns:
+        raise ValueError(f"Column '{column_name}' not found in the DataFrame.")
+
+    # Initialize a list to store related data per row
+    related_data_per_row = []
+
+    # Iterate through the metadata DataFrame
+    for _, row in metadata_df.iterrows():
+        try:
+            # Extract related data for the current row
+            related_data = []
+            for item in row[column_name]:
+                related_data.append(item.name)
+
+            # Append the extracted data for this row
+            related_data_per_row.append(related_data)
+        except Exception as e:
+            print(f"Error processing row to extract {column_name}, {row.name}: {e}")
+            related_data_per_row.append([])  # Add an empty list for rows with errors
+
+    # Return a Series aligned with the metadata DataFrame
+    return pd.Series(related_data_per_row, index=metadata_df.index)
+
 def extract_units(metadata, metadata_df, column_name):
     """
     Extracts units for a specific equipment attribute and aligns them with the DataFrame index.

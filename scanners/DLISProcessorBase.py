@@ -1,5 +1,6 @@
 import numpy as np
-from utils.dlis_utils import summary_dataframe, extract_metadata, extract_units
+from utils.dlis_utils import summary_dataframe, extract_metadata, extract_units, extract_relationships
+
 
 class DLISProcessorBase:
     """
@@ -19,7 +20,7 @@ class DLISProcessorBase:
         self._items = items
         self._nulls_list = nulls_list or []
 
-    def process_items(self, attributes, units_relevant_columns):
+    def process_items(self, attributes, units_relevant_columns, related_columns=[]):
         """
         Processes the items into a DataFrame and converts to a JSON-like format.
 
@@ -53,6 +54,9 @@ class DLISProcessorBase:
                     metadata=self._items, metadata_df=items_df, column_name=column.upper()
                 )
 
+            for column in related_columns:
+                items_df[column] = extract_relationships(metadata_df=items_df, column_name=column)
+
             # Add logical file ID
             items_df["logical-file-id"] = self._logical_file_id
 
@@ -60,12 +64,12 @@ class DLISProcessorBase:
             items_df = items_df[~items_df.isin(self._nulls_list).any(axis=1)]
 
             # Clean and deduplicate the DataFrame
-            items_df = items_df.drop_duplicates(ignore_index=True)
-
+            # items_df = items_df.drop_duplicates(ignore_index=True)
+            items_df = items_df.drop_duplicates(subset=["name"], ignore_index=True)
+            print(items_df.dtypes)
             # Transform the DataFrame into the JSON-like format
             return extract_metadata(items_df)
 
         except Exception as e:
             print(f"Error processing items for logical file {self._logical_file_id}: {e}")
             raise
-

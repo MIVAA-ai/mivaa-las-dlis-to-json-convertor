@@ -15,8 +15,12 @@ class DLISParametersProcessor(DLISProcessorBase):
         attributes = {
             "name": "name",
             "values": "values",
-            "long_name": "description"
+            "long_name": "description",
+            "dimension": "dimension",
+            "axis": "axis",
+            "zones": "zones"
         }
         units_relevant_columns = ["values"]
+        related_columns = ["axis", "zones"]
 
-        return self.process_items(attributes, units_relevant_columns)
+        return self.process_items(attributes, units_relevant_columns, related_columns=related_columns)

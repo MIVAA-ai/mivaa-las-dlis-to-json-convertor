@@ -3,7 +3,8 @@ import json
 from DLISParametersProcessor import DLISParametersProcessor
 from DLISToolsProcessor import DLISToolsProcessor
 from scanners.DLISEquipmentsProcessor import DLISEquipmentsProcessor
-from scanners.DLISZoneProcessor import DLISZoneProcessor
+from scanners.DLISFramesProcessor import DLISFramesProcessor
+from scanners.DLISZonesProcessor import DLISZoneProcessor
 
 
 class DLISLogicalFile:
@@ -28,36 +29,44 @@ class DLISLogicalFile:
         """
         try:
             # Delegate origin processing to DLISOriginsProcessor
-            origins_processor = DLISOriginsProcessor(
-                logical_file_id=self._logical_file_id,
-                origins=self._logical_file.origins
-            )
-
-            # Map headers
-            header = origins_processor.map_headers()
-            # Pretty print the JSON output
-            print(json.dumps(header, indent=4))
-
-            parameters_processor = DLISParametersProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.parameters
-            )
-            parameters = parameters_processor.extract_parameters()
-            print(json.dumps(parameters, indent=4))
-
-            equipments_processor = DLISEquipmentsProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.equipments
-            )
-            equipments = equipments_processor.extract_equipments()
-            print(json.dumps(equipments, indent=4))
-
-            zones_processor = DLISZoneProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.zones
-            )
-            zones = zones_processor.extract_zones()
-            print(json.dumps(zones, indent=4))
+            # origins_processor = DLISOriginsProcessor(
+            #     logical_file_id=self._logical_file_id,
+            #     origins=self._logical_file.origins
+            # )
+            #
+            # # Map headers
+            # header = origins_processor.map_headers()
+            # # Pretty print the JSON output
+            # print(json.dumps(header, indent=4))
+            #
+            # frames_processor = DLISFramesProcessor(
+            #     logical_file_id=self._logical_file_id,
+            #     items=self._logical_file.frames
+            # )
+            # frames = frames_processor.extract_frames()
+            # print(json.dumps(frames, indent=4))
+            #
+            #
+            # parameters_processor = DLISParametersProcessor(
+            #     logical_file_id=self._logical_file_id,
+            #     items=self._logical_file.parameters
+            # )
+            # parameters = parameters_processor.extract_parameters()
+            # print(json.dumps(parameters, indent=4))
+            #
+            # equipments_processor = DLISEquipmentsProcessor(
+            #     logical_file_id=self._logical_file_id,
+            #     items=self._logical_file.equipments
+            # )
+            # equipments = equipments_processor.extract_equipments()
+            # print(json.dumps(equipments, indent=4))
+            #
+            # zones_processor = DLISZoneProcessor(
+            #     logical_file_id=self._logical_file_id,
+            #     items=self._logical_file.zones
+            # )
+            # zones = zones_processor.extract_zones()
+            # print(json.dumps(zones, indent=4))
 
             tools_processor = DLISToolsProcessor(
                 logical_file_id=self._logical_file_id,
