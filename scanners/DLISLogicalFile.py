@@ -52,6 +52,7 @@ class DLISLogicalFile:
                 items=self._logical_file.channels
             )
             channels = channels_processor.extract_channels()
+            channels_curves = channels_processor.extract_bulk_data()
             print(json.dumps(channels, indent=4))
 
 
