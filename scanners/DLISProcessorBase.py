@@ -1,5 +1,5 @@
 import numpy as np
-from utils.dlis_utils import summary_dataframe, extract_metadata, extract_units, extract_relationships
+from utils.dlis_utils import summary_dataframe, extract_metadata, extract_units, extract_relationships, process_dataframe_lists
 
 
 class DLISProcessorBase:
@@ -64,9 +64,7 @@ class DLISProcessorBase:
             items_df = items_df[~items_df.isin(self._nulls_list).any(axis=1)]
 
             # Clean and deduplicate the DataFrame
-            # items_df = items_df.drop_duplicates(ignore_index=True)
-            items_df = items_df.drop_duplicates(subset=["name"], ignore_index=True)
-            print(items_df.dtypes)
+            items_df = process_dataframe_lists(items_df)
             # Transform the DataFrame into the JSON-like format
             return extract_metadata(items_df)
 

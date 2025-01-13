@@ -1,7 +1,7 @@
 from mappings.HeaderMappings import HeaderMapping
 from utils.DateUtils import DateUtils
 import pandas as pd
-
+from utils.dlis_utils import parse_value, process_dataframe_lists
 
 def _get_first_matching_value(fields, origins_df):
     """
@@ -106,9 +106,7 @@ class DLISOriginsProcessor:
             # Convert list to DataFrame and clean
             origins_df = pd.DataFrame(origin_list)
             if not origins_df.empty:
-                origins_df["value"] = origins_df["value"].astype(str)
-                # origins_df = origins_df.drop_duplicates(subset=["name", "value"], ignore_index=True)
-                origins_df = origins_df.drop_duplicates(ignore_index=True)
+                origins_df = process_dataframe_lists(origins_df)
 
             return origins_df
 
@@ -134,7 +132,7 @@ class DLISOriginsProcessor:
                         raise ValueError(f"{key} has no value in list")
                     origin_list.append({
                         "name": key,
-                        "value": origin[key],
+                        "value": parse_value(origin[key]),
                         "logical-file-id": self._logical_file_id,
                     })
             except ValueError as ve:

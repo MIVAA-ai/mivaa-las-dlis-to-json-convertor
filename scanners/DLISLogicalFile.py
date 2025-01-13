@@ -29,15 +29,15 @@ class DLISLogicalFile:
         """
         try:
             # Delegate origin processing to DLISOriginsProcessor
-            # origins_processor = DLISOriginsProcessor(
-            #     logical_file_id=self._logical_file_id,
-            #     origins=self._logical_file.origins
-            # )
-            #
-            # # Map headers
-            # header = origins_processor.map_headers()
-            # # Pretty print the JSON output
-            # print(json.dumps(header, indent=4))
+            origins_processor = DLISOriginsProcessor(
+                logical_file_id=self._logical_file_id,
+                origins=self._logical_file.origins
+            )
+
+            # Map headers
+            header = origins_processor.map_headers()
+            # Pretty print the JSON output
+            print(json.dumps(header, indent=4))
 
             frames_processor = DLISFramesProcessor(
                 logical_file_id=self._logical_file_id,

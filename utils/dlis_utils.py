@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 
 def summary_dataframe(items, **kwargs):
     """
@@ -151,3 +152,42 @@ def parse_value(value):
         return str(value).strip() if value is not None else None
     except Exception:
         return str(value).strip() if value is not None else None
+
+def process_dataframe_lists(df):
+    """
+    Detects columns with lists, serializes them for hashability, deduplicates the DataFrame,
+    and deserializes them back into lists.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to process.
+
+    Returns:
+        pd.DataFrame: The processed DataFrame with lists preserved after deduplication.
+    """
+    # Detect columns with lists
+    list_columns = [
+        col for col in df.columns
+        if df[col].apply(lambda x: isinstance(x, (list, np.ndarray, tuple))).any()
+    ]
+
+    if not list_columns:
+        print("No list columns detected. Returning original DataFrame.")
+        return df
+
+    print(f"Detected list columns: {list_columns}")
+
+    # Create a copy of the DataFrame to avoid potential SettingWithCopyWarning
+    df = df.copy()
+
+    # Serialize lists into JSON strings
+    for col in list_columns:
+        df.loc[:, col] = df[col].apply(lambda x: json.dumps(x) if isinstance(x, (list, np.ndarray, tuple)) else x)
+
+    # Deduplicate the DataFrame
+    df = df.drop_duplicates(subset=["name"], ignore_index=True)
+
+    # Deserialize JSON strings back into lists
+    for col in list_columns:
+        df.loc[:, col] = df[col].apply(lambda x: json.loads(x) if isinstance(x, str) and x.startswith('[') else x)
+
+    return df
