@@ -2,6 +2,7 @@ from DLISOriginsProcessor import DLISOriginsProcessor
 import json
 from DLISParametersProcessor import DLISParametersProcessor
 from DLISToolsProcessor import DLISToolsProcessor
+from scanners.DLISChannelsProcessor import DLISChannelsProcessor
 from scanners.DLISEquipmentsProcessor import DLISEquipmentsProcessor
 from scanners.DLISFramesProcessor import DLISFramesProcessor
 from scanners.DLISZonesProcessor import DLISZoneProcessor
@@ -45,6 +46,13 @@ class DLISLogicalFile:
             )
             frames = frames_processor.extract_frames()
             print(json.dumps(frames, indent=4))
+
+            channels_processor = DLISChannelsProcessor(
+                logical_file_id=self._logical_file_id,
+                items=self._logical_file.channels
+            )
+            channels = channels_processor.extract_channels()
+            print(json.dumps(channels, indent=4))
 
 
             parameters_processor = DLISParametersProcessor(

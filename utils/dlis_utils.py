@@ -53,7 +53,6 @@ def extract_metadata(metadata_df):
 
     return metadata_info
 
-
 def extract_relationships(metadata_df, column_name):
     """
     Extracts relationships (e.g., channels) from the specified column in the metadata DataFrame
@@ -75,17 +74,26 @@ def extract_relationships(metadata_df, column_name):
 
     # Iterate through the metadata DataFrame
     for _, row in metadata_df.iterrows():
-        try:
-            # Extract related data for the current row
-            related_data = []
-            for item in row[column_name]:
-                related_data.append(item.name)
+        # Extract related data for the current row
+        related_data = []
 
-            # Append the extracted data for this row
-            related_data_per_row.append(related_data)
+        try:
+            # Safely check if the column is iterable
+            if isinstance(row[column_name], list):
+                for item in row[column_name]:
+                    if hasattr(item, "name"):
+                        related_data.append(item.name)
+            elif hasattr(row[column_name], "name"):
+                # If it's a single object with a `name` attribute
+                related_data.append(row[column_name].name)
+            else:
+                print(f"Unexpected type in row {row.name} for column '{column_name}'")
+
         except Exception as e:
-            print(f"Error processing row to extract {column_name}, {row.name}: {e}")
-            related_data_per_row.append([])  # Add an empty list for rows with errors
+            print(f"Error processing row {row.name} in column '{column_name}': {e}")
+
+        # Append the extracted data for this row
+        related_data_per_row.append(related_data)
 
     # Return a Series aligned with the metadata DataFrame
     return pd.Series(related_data_per_row, index=metadata_df.index)
