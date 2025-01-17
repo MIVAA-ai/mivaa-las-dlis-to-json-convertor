@@ -6,6 +6,7 @@ from scanners.DLISChannelsProcessor import DLISChannelsProcessor
 from scanners.DLISEquipmentsProcessor import DLISEquipmentsProcessor
 from scanners.DLISFramesProcessor import DLISFramesProcessor
 from scanners.DLISZonesProcessor import DLISZoneProcessor
+from utils.SerialiseJson import JsonSerializable
 
 
 class DLISLogicalFile:
@@ -28,62 +29,67 @@ class DLISLogicalFile:
         """
         Scans the logical file, extracts, transforms, and prints origin data as JSON.
         """
-        try:
-            # Delegate origin processing to DLISOriginsProcessor
-            origins_processor = DLISOriginsProcessor(
-                logical_file_id=self._logical_file_id,
-                origins=self._logical_file.origins
-            )
+        # try:
+        # Delegate origin processing to DLISOriginsProcessor
+        origins_processor = DLISOriginsProcessor(
+            logical_file_id=self._logical_file_id,
+            origins=self._logical_file.origins
+        )
+        header = origins_processor.map_headers()
 
-            # Map headers
-            header = origins_processor.map_headers()
-            # Pretty print the JSON output
-            print(json.dumps(header, indent=4))
+        parameters_processor = DLISParametersProcessor(
+            logical_file_id=self._logical_file_id,
+            items=self._logical_file.parameters
+        )
+        parameters = parameters_processor.extract_parameters()
 
+        equipments_processor = DLISEquipmentsProcessor(
+            logical_file_id=self._logical_file_id,
+            items=self._logical_file.equipments
+        )
+        equipments = equipments_processor.extract_equipments()
+
+        zones_processor = DLISZoneProcessor(
+            logical_file_id=self._logical_file_id,
+            items=self._logical_file.zones
+        )
+        zones = zones_processor.extract_zones()
+
+        tools_processor = DLISToolsProcessor(
+            logical_file_id=self._logical_file_id,
+            items=self._logical_file.tools
+        )
+        tools = tools_processor.extract_tools()
+
+        # Process frames, channels, and curves
+        combined_output = []
+        for frame in self._logical_file.frames:
+            # Extract frame-level metadata
             frames_processor = DLISFramesProcessor(
                 logical_file_id=self._logical_file_id,
-                items=self._logical_file.frames
+                items=[frame]
             )
-            frames = frames_processor.extract_frames()
-            print(json.dumps(frames, indent=4))
+            frame_data = frames_processor.extract_frames()
 
+            # Extract channels and curves for the current frame
             channels_processor = DLISChannelsProcessor(
                 logical_file_id=self._logical_file_id,
-                items=self._logical_file.channels
+                items=frame.channels
             )
             channels = channels_processor.extract_channels()
-            channels_curves = channels_processor.extract_bulk_data()
-            print(json.dumps(channels, indent=4))
+            curves = channels_processor.extract_bulk_data()
 
+            # Combine all data into the frame-specific dictionary
+            frame_output = {
+                "header": header,
+                "parameters": parameters,
+                "equipments": equipments,
+                "zones": zones,
+                "tools": tools,
+                "frame": frame_data,
+                "channels": channels,
+                "frame_curves": curves
+            }
 
-            parameters_processor = DLISParametersProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.parameters
-            )
-            parameters = parameters_processor.extract_parameters()
-            print(json.dumps(parameters, indent=4))
-
-            equipments_processor = DLISEquipmentsProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.equipments
-            )
-            equipments = equipments_processor.extract_equipments()
-            print(json.dumps(equipments, indent=4))
-
-            zones_processor = DLISZoneProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.zones
-            )
-            zones = zones_processor.extract_zones()
-            print(json.dumps(zones, indent=4))
-
-            tools_processor = DLISToolsProcessor(
-                logical_file_id=self._logical_file_id,
-                items=self._logical_file.tools
-            )
-            tools = tools_processor.extract_tools()
-            print(json.dumps(tools, indent=4))
-
-        except Exception as e:
-            print(f"Error scanning logical file {self._logical_file_id}: {e}")
-            raise
+            combined_output.append(frame_output)
+        return combined_output
