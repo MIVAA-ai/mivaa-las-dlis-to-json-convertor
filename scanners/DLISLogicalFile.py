@@ -7,6 +7,7 @@ from scanners.DLISEquipmentsProcessor import DLISEquipmentsProcessor
 from scanners.DLISFramesProcessor import DLISFramesProcessor
 from scanners.DLISZonesProcessor import DLISZoneProcessor
 from utils.SerialiseJson import JsonSerializable
+from utils.dlis_utils import transform_curves_to_json_well_log_format
 
 
 class DLISLogicalFile:
@@ -77,6 +78,7 @@ class DLISLogicalFile:
                 items=frame.channels
             )
             channels = channels_processor.extract_channels()
+            formatted_channels = transform_curves_to_json_well_log_format(channels)
             curves = channels_processor.extract_bulk_data()
 
             # Combine all data into the frame-specific dictionary
@@ -87,8 +89,8 @@ class DLISLogicalFile:
                 "zones": zones,
                 "tools": tools,
                 "frame": frame_data,
-                "channels": channels,
-                "frame_curves": curves
+                "curves": formatted_channels,
+                "data": curves
             }
 
             combined_output.append(frame_output)

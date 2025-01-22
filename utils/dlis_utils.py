@@ -199,3 +199,43 @@ def process_dataframe_lists(df):
         df.loc[:, col] = df[col].apply(lambda x: json.loads(x) if isinstance(x, str) and x.startswith('[') else x)
 
     return df
+
+def transform_curves_to_json_well_log_format(curves_data):
+    """
+    Transforms DLIS curves data into the JSON Well Log format.
+
+    Args:
+        curves_data (dict): Dictionary containing curves information in the original format.
+
+    Returns:
+        list: A list of dictionaries representing curves in the JSON Well Log format.
+    """
+    transformed_curves = []
+
+    # Iterate over each curve in the original data
+    for curve_name, curve_details in curves_data["objects"].items():
+        # Ensure curve name is present and non-null
+        if not curve_name:
+            print("Skipping curve with missing or null name.")
+            continue
+
+        # Extract and transform curve information
+        curve_data = {
+            "name": curve_name,  # Curve name or mnemonic (mandatory)
+            "description": curve_details[0] if len(curve_details) > 0 else None,  # Description (optional)
+            "quantity": None,  # Assuming quantity is not present in the input data
+            "unit": curve_details[2] if len(curve_details) > 2 else None,  # Unit of measurement (optional)
+            "valueType": "float",  # Default to "float" (optional)
+            "dimensions": len(curve_details[4]) if len(curve_details) > 4 and isinstance(curve_details[4], list) else 1,  # Dimensions, default to 1 (optional)
+            "axis": curve_details[4] if len(curve_details) > 4 and isinstance(curve_details[4], list) else [],  # Axis (optional)
+            "maxSize": 20 if curve_details[5] is None else curve_details[5]  # Default to 20 if not provided
+        }
+
+        # Adjust maxSize for non-string value types
+        if curve_data["valueType"] != "string":
+            curve_data.pop("maxSize", None)
+
+        # Append the transformed curve to the list
+        transformed_curves.append(curve_data)
+
+    return transformed_curves

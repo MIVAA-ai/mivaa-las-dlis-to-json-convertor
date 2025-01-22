@@ -129,7 +129,7 @@ class DLISChannelsProcessor(DLISProcessorBase):
                 # Add the row to the formatted data
                 formatted_data.append(row_data)
 
-            return {"data": formatted_data}
+            return formatted_data
 
         except Exception as e:
             print(f"Error during bulk data extraction: {e}")

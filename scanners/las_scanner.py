@@ -36,14 +36,16 @@ class LasScanner:
             }
         ]
 
+        return combined_output
+
         # Validate against the Pydantic model
-        try:
-            validated_data = JsonWellLogFormat.model_validate(combined_output)
-            return validated_data
-        except ValidationError as e:
-            # Log or handle validation errors
-            print("Validation Error:", e)
-            raise
+        # try:
+        #     validated_data = JsonWellLogFormat.model_validate(combined_output)
+        #     return validated_data
+        # except ValidationError as e:
+        #     # Log or handle validation errors
+        #     print("Validation Error:", e)
+        #     raise
 
     def _extract_bulk_data(self, las_file, null_value):
         """
