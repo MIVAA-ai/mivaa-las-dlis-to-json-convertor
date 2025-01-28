@@ -14,7 +14,7 @@ from pathlib import Path
 #pending work to be done before release
 # change the checksum logic to calculate on output files
 # change the print to logger
-
+# add traceback to exceptions
 
 file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\DLIS_HESP.41383.dlis'
 # file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\11_30a-_9Z_dwl_DWL_WIRE_238615014.las'

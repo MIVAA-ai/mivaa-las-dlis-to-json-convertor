@@ -1,6 +1,7 @@
 import numpy as np
 from utils.dlis_utils import summary_dataframe, extract_metadata, extract_units, extract_relationships, process_dataframe_lists
 import traceback
+import inspect
 
 class DLISProcessorBase:
     """
@@ -31,11 +32,19 @@ class DLISProcessorBase:
         Returns:
             dict: Processed metadata in a JSON-like format.
         """
+        # Get the calling class using the inspect module
+        frame = inspect.currentframe()
+        try:
+            caller_class = inspect.getouterframes(frame)[1].frame.f_locals.get('self', None).__class__.__name__
+        finally:
+            del frame  # Avoid reference cycles
+
+
         # Create a DataFrame using the summary function
         items_df = summary_dataframe(self._items, **attributes)
 
         if items_df.empty:
-            print(f"No items found for logical file: {self._logical_file_id}")
+            print(f"No items for {caller_class} found for logical file: {self._logical_file_id}")
             return {}
 
         try:

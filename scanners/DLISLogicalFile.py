@@ -31,11 +31,17 @@ class DLISLogicalFile:
         """
         # try:
         # Delegate origin processing to DLISOriginsProcessor
+        print(f"Extracting origins for {self._logical_file_id}")
+
         origins_processor = DLISOriginsProcessor(
             logical_file_id=self._logical_file_id,
             origins=self._logical_file.origins
         )
         header = origins_processor.map_headers()
+
+        print(f"Extracting origins for {self._logical_file_id} is successful")
+
+        print(f"Extracting parameters for {self._logical_file_id}")
 
         parameters_processor = DLISParametersProcessor(
             logical_file_id=self._logical_file_id,
@@ -43,11 +49,19 @@ class DLISLogicalFile:
         )
         parameters = parameters_processor.extract_parameters()
 
+        print(f"Extracting parameters for {self._logical_file_id} is successful")
+
+        print(f"Extracting equipments for {self._logical_file_id}")
+
         equipments_processor = DLISEquipmentsProcessor(
             logical_file_id=self._logical_file_id,
             items=self._logical_file.equipments
         )
         equipments = equipments_processor.extract_equipments()
+
+        print(f"Extracting equipments for {self._logical_file_id} is successful")
+
+        print(f"Extracting zones for {self._logical_file_id}")
 
         zones_processor = DLISZoneProcessor(
             logical_file_id=self._logical_file_id,
@@ -55,11 +69,19 @@ class DLISLogicalFile:
         )
         zones = zones_processor.extract_zones()
 
+        print(f"Extracting zones for {self._logical_file_id} is successful")
+
+        print(f"Extracting tools for {self._logical_file_id}")
+
         tools_processor = DLISToolsProcessor(
             logical_file_id=self._logical_file_id,
             items=self._logical_file.tools
         )
         tools = tools_processor.extract_tools()
+
+        print(f"Extracting tools for {self._logical_file_id} is successful")
+
+        print(f"Extracting channels for {self._logical_file_id}")
 
         # Process frames, channels, and curves
         combined_output = []
@@ -93,4 +115,7 @@ class DLISLogicalFile:
             }
 
             combined_output.append(frame_output)
+
+        print(f"Extracting channels for {self._logical_file_id} is successful")
+
         return combined_output
