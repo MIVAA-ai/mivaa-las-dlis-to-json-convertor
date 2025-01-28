@@ -53,6 +53,32 @@ def extract_metadata(metadata_df):
 
     return metadata_info
 
+def process_relationship_cell(cell_value):
+    """
+    Processes a single cell value to extract related data (channel names).
+
+    Args:
+        cell_value: The value of a cell from the specified column.
+
+    Returns:
+        list: A list of extracted channel names or an empty list if no names are found.
+    """
+    # Return an empty list for None or NaN
+    if cell_value is None:
+        return []
+
+    # Handle list-like objects (e.g., lists, numpy arrays)
+    if isinstance(cell_value, (list, np.ndarray)):
+        return [item.name for item in cell_value if hasattr(item, "name")]
+
+    # Handle single objects with a `name` attribute
+    if hasattr(cell_value, "name"):
+        return [cell_value.name]
+
+    # Fallback for unexpected types
+    print(f"Unexpected type: {type(cell_value)}")
+    return []
+
 def extract_relationships(metadata_df, column_name):
     """
     Extracts relationships (e.g., channels) from the specified column in the metadata DataFrame
@@ -69,34 +95,67 @@ def extract_relationships(metadata_df, column_name):
     if column_name not in metadata_df.columns:
         raise ValueError(f"Column '{column_name}' not found in the DataFrame.")
 
-    # Initialize a list to store related data per row
-    related_data_per_row = []
+    # Apply the `process_cell` function to the specified column
+    return metadata_df[column_name].apply(process_relationship_cell)
 
-    # Iterate through the metadata DataFrame
-    for _, row in metadata_df.iterrows():
-        # Extract related data for the current row
-        related_data = []
 
-        try:
-            # Safely check if the column is iterable
-            if isinstance(row[column_name], list):
-                for item in row[column_name]:
-                    if hasattr(item, "name"):
-                        related_data.append(item.name)
-            elif hasattr(row[column_name], "name"):
-                # If it's a single object with a `name` attribute
-                related_data.append(row[column_name].name)
-            else:
-                print(f"Unexpected type in row {row.name} for column '{column_name}'")
 
-        except Exception as e:
-            print(f"Error processing row {row.name} in column '{column_name}': {e}")
-
-        # Append the extracted data for this row
-        related_data_per_row.append(related_data)
-
-    # Return a Series aligned with the metadata DataFrame
-    return pd.Series(related_data_per_row, index=metadata_df.index)
+# def extract_relationships(metadata_df, column_name):
+#     """
+#     Extracts relationships (e.g., channels) from the specified column in the metadata DataFrame
+#     and transposes the data to match the number of rows in the DataFrame.
+#
+#     Args:
+#         metadata_df (pd.DataFrame): DataFrame containing frames and their attributes.
+#         column_name (str): The name of the column containing the channels information.
+#
+#     Returns:
+#         pd.Series: A Series with lists of channels for each row, aligned with metadata_df rows.
+#     """
+#     # Ensure the column exists in the DataFrame
+#     if column_name not in metadata_df.columns:
+#         raise ValueError(f"Column '{column_name}' not found in the DataFrame.")
+#
+#     # Initialize a list to store related data per row
+#     related_data_per_row = []
+#
+#     # Iterate through the metadata DataFrame
+#     for _, row in metadata_df.iterrows():
+#         # Extract related data for the current row
+#         related_data = []
+#
+#         try:
+#             # Check if the column value is None or missing
+#             cell_value = row[column_name]
+#             print(f'{cell_value}: {column_name}')
+#             if pd.isnull(cell_value) or isinstance(cell_value, type(None)):
+#                 # Append an empty list if the cell is None or missing
+#                 related_data_per_row.append([])
+#                 continue
+#
+#             # Handle cases where the column value is a list, array, or other iterable
+#             if isinstance(cell_value, (list, np.ndarray, tuple)):
+#                 for item in cell_value:
+#                     if hasattr(item, "name"):
+#                         related_data.append(item.name)
+#
+#             # Handle cases where the column value is a single object with a `name` attribute
+#             elif hasattr(cell_value, "name"):
+#                 related_data.append(cell_value.name)
+#
+#             # Handle unexpected types
+#             else:
+#                 print(f"Unexpected type in row {row.name} for column '{column_name}'")
+#                 related_data.append(None)
+#
+#         except Exception as e:
+#             print(f"Error processing row {row.name} in column '{column_name}': {e}")
+#
+#         # Append the extracted data for this row
+#         related_data_per_row.append(related_data)
+#
+#     # Return a Series aligned with the metadata DataFrame
+#     return pd.Series(related_data_per_row, index=metadata_df.index)
 
 def extract_units(metadata, metadata_df, column_name):
     """
@@ -181,8 +240,6 @@ def process_dataframe_lists(df):
     if not list_columns:
         print("No list columns detected. Returning original DataFrame.")
         return df
-
-    print(f"Detected list columns: {list_columns}")
 
     # Create a copy of the DataFrame to avoid potential SettingWithCopyWarning
     df = df.copy()

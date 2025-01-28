@@ -2,7 +2,8 @@ from pathlib import Path
 import time
 import os
 import logging
-from worker.tasks import convert_las_to_json_task
+from dlisio import dlis
+from worker.tasks import convert_las_to_json_task, convert_dlis_to_json_task
 from .crawlerconfig import CRAWLER_CONFIG
 from utils.IdentifyWellLogFormat import IdentifyWellLogFormat
 from mappings.WellLogsFormat import WellLogFormat
@@ -42,10 +43,13 @@ def poll_folder():
                     print(f"Task submitted for LAS file {file}, Task ID: {result}")
 
                 elif file_format == WellLogFormat.DLIS:
-                    print(f"Identified as DLIS: {file}")
-                    result = convert_dlis_to_json_task(str(file), str(processed_folder))
-                    print(f"Task submitted for DLIS file {file}, Task ID: {result}")
+                    print(f"Identified as DLIS: {file}. Extracting logical files for scanning")
+                    logical_files = dlis.load(file)
+                    print(f"Loaded {len(logical_files)} logical files from DLIS {file}")
 
+                    for logical_file in logical_files:
+                        result = convert_dlis_to_json_task(str(file), str(processed_folder), logical_file)
+                        print(f"Task submitted for logical file {logical_file.fileheader.id} in DLIS file {file}, Task ID: {result}")
                 else:
                     print(f"Unknown format: {file}")
 

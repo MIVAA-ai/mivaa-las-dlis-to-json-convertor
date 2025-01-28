@@ -1,6 +1,6 @@
 import numpy as np
 from utils.dlis_utils import summary_dataframe, extract_metadata, extract_units, extract_relationships, process_dataframe_lists
-
+import traceback
 
 class DLISProcessorBase:
     """
@@ -70,4 +70,5 @@ class DLISProcessorBase:
 
         except Exception as e:
             print(f"Error processing items for logical file {self._logical_file_id}: {e}")
+            print(traceback.format_exc())  # Prints the entire stack trace
             raise

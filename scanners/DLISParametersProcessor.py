@@ -1,4 +1,4 @@
-from DLISProcessorBase import DLISProcessorBase
+from scanners.DLISProcessorBase import DLISProcessorBase
 
 class DLISParametersProcessor(DLISProcessorBase):
     """

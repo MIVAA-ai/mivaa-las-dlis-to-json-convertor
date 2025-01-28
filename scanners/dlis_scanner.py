@@ -16,25 +16,19 @@
 from dataclasses import field
 
 from dlisio import dlis
-from DLISLogicalFile import DLISLogicalFile
+from scanners.DLISLogicalFile import DLISLogicalFile
 class DLISScanner:
     """
        Scans a DLIS physical file and processes its logical files.
     """
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, logical_file):
         self._file_path = file_path
-        self._logical_files = []
+        self._logical_file = logical_file
 
     def scan(self):
         """
             Load and process all logical files in the DLIS physical file.
         """
-        logical_files = dlis.load(self._file_path)
-        self._logical_files.extend(logical_files)
-
-        print(f"Loaded {len(self._logical_files)} logical files.")
-
-        # Process the first logical file as an example
-        first_logical_file_object = DLISLogicalFile(logical_file=self._logical_files[0])
-        return first_logical_file_object.scan_logical_file()
+        logical_file_object = DLISLogicalFile(logical_file=self._logical_file)
+        return logical_file_object.scan_logical_file()

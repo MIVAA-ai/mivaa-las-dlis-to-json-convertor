@@ -1,12 +1,11 @@
-from DLISOriginsProcessor import DLISOriginsProcessor
+from scanners.DLISOriginsProcessor import DLISOriginsProcessor
 import json
-from DLISParametersProcessor import DLISParametersProcessor
-from DLISToolsProcessor import DLISToolsProcessor
+from scanners.DLISParametersProcessor import DLISParametersProcessor
+from scanners.DLISToolsProcessor import DLISToolsProcessor
 from scanners.DLISChannelsProcessor import DLISChannelsProcessor
 from scanners.DLISEquipmentsProcessor import DLISEquipmentsProcessor
 from scanners.DLISFramesProcessor import DLISFramesProcessor
 from scanners.DLISZonesProcessor import DLISZoneProcessor
-from utils.SerialiseJson import JsonSerializable
 from utils.dlis_utils import transform_curves_to_json_well_log_format
 
 

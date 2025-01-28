@@ -1,4 +1,4 @@
-from DLISProcessorBase import DLISProcessorBase
+from scanners.DLISProcessorBase import DLISProcessorBase
 import numpy as np
 
 class DLISChannelsProcessor(DLISProcessorBase):
@@ -83,13 +83,12 @@ class DLISChannelsProcessor(DLISProcessorBase):
         try:
             channel_data = []
             max_rows = 0
-
+            channel_names = []
             for channel in self._items:
                 try:
                     # Retrieve data for the channel
-                    print(f"Retrieving data for channel: {channel.name}")
                     channel_values = channel.curves()
-                    print(f"Retrieval for channel: {channel.name} completed")
+                    channel_names.append(channel.name)
 
                     # Determine the number of rows (index length)
                     rows = channel_values.shape[0] if hasattr(channel_values, "shape") else len(channel_values)
@@ -102,6 +101,7 @@ class DLISChannelsProcessor(DLISProcessorBase):
                     print(f"Error retrieving data for channel '{channel.name}': {e}")
                     continue
 
+            print(f"Data acquired for channels {channel_names}")
             # Prepare the final data structure
             formatted_data = []
 
