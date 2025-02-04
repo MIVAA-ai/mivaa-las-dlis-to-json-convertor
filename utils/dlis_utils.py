@@ -98,65 +98,6 @@ def extract_relationships(metadata_df, column_name):
     # Apply the `process_cell` function to the specified column
     return metadata_df[column_name].apply(process_relationship_cell)
 
-
-
-# def extract_relationships(metadata_df, column_name):
-#     """
-#     Extracts relationships (e.g., channels) from the specified column in the metadata DataFrame
-#     and transposes the data to match the number of rows in the DataFrame.
-#
-#     Args:
-#         metadata_df (pd.DataFrame): DataFrame containing frames and their attributes.
-#         column_name (str): The name of the column containing the channels information.
-#
-#     Returns:
-#         pd.Series: A Series with lists of channels for each row, aligned with metadata_df rows.
-#     """
-#     # Ensure the column exists in the DataFrame
-#     if column_name not in metadata_df.columns:
-#         raise ValueError(f"Column '{column_name}' not found in the DataFrame.")
-#
-#     # Initialize a list to store related data per row
-#     related_data_per_row = []
-#
-#     # Iterate through the metadata DataFrame
-#     for _, row in metadata_df.iterrows():
-#         # Extract related data for the current row
-#         related_data = []
-#
-#         try:
-#             # Check if the column value is None or missing
-#             cell_value = row[column_name]
-#             print(f'{cell_value}: {column_name}')
-#             if pd.isnull(cell_value) or isinstance(cell_value, type(None)):
-#                 # Append an empty list if the cell is None or missing
-#                 related_data_per_row.append([])
-#                 continue
-#
-#             # Handle cases where the column value is a list, array, or other iterable
-#             if isinstance(cell_value, (list, np.ndarray, tuple)):
-#                 for item in cell_value:
-#                     if hasattr(item, "name"):
-#                         related_data.append(item.name)
-#
-#             # Handle cases where the column value is a single object with a `name` attribute
-#             elif hasattr(cell_value, "name"):
-#                 related_data.append(cell_value.name)
-#
-#             # Handle unexpected types
-#             else:
-#                 print(f"Unexpected type in row {row.name} for column '{column_name}'")
-#                 related_data.append(None)
-#
-#         except Exception as e:
-#             print(f"Error processing row {row.name} in column '{column_name}': {e}")
-#
-#         # Append the extracted data for this row
-#         related_data_per_row.append(related_data)
-#
-#     # Return a Series aligned with the metadata DataFrame
-#     return pd.Series(related_data_per_row, index=metadata_df.index)
-
 def extract_units(metadata, metadata_df, column_name):
     """
     Extracts units for a specific equipment attribute and aligns them with the DataFrame index.

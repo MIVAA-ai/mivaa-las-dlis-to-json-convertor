@@ -3,7 +3,10 @@ import time
 import os
 import logging
 from dlisio import dlis
-from worker.tasks import convert_las_to_json_task, convert_dlis_to_json_task
+
+from scanners.dlis_scanner import DLISScanner
+from scanners.las_scanner import LasScanner
+from worker.tasks import convert_to_json_task
 from .crawlerconfig import CRAWLER_CONFIG
 from utils.IdentifyWellLogFormat import IdentifyWellLogFormat
 from mappings.WellLogsFormat import WellLogFormat
@@ -37,9 +40,17 @@ def poll_folder():
                 # Identify the file format
                 file_format = IdentifyWellLogFormat.GetFormat(file)
 
+                # def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format, logical_file=None):
+
                 if file_format == WellLogFormat.LAS:
                     print(f"Identified as LAS: {file}")
-                    result = convert_las_to_json_task(str(file), str(processed_folder))
+                    # result = convert_las_to_json_task(str(file), str(processed_folder))
+                    result = convert_to_json_task.delay(
+                        filepath=str(file),
+                        output_folder=str(processed_folder),
+                        scanner_cls=LasScanner,
+                        file_format=WellLogFormat.LAS
+                    )
                     print(f"Task submitted for LAS file {file}, Task ID: {result}")
 
                 elif file_format == WellLogFormat.DLIS:
@@ -48,7 +59,14 @@ def poll_folder():
                     print(f"Loaded {len(logical_files)} logical files from DLIS {file}")
 
                     for logical_file in logical_files:
-                        result = convert_dlis_to_json_task(str(file), str(processed_folder), logical_file)
+                        # result = convert_dlis_to_json_task(str(file), str(processed_folder), logical_file)
+                        result = convert_to_json_task.delay(
+                            filepath=str(file),
+                            output_folder=str(processed_folder),
+                            scanner_cls=DLISScanner,
+                            file_format=WellLogFormat.DLIS,
+                            logical_file=logical_file
+                        )
                         print(f"Task submitted for logical file {logical_file.fileheader.id} in DLIS file {file}, Task ID: {result}")
                 else:
                     print(f"Unknown format: {file}")
@@ -60,42 +78,6 @@ def poll_folder():
             print(f"Error during polling: {e}")
 
         time.sleep(5)  # Poll every 5 seconds
-
-# def poll_folder():
-#     """
-#     Poll the uploads folder for new .las files and trigger Celery tasks.
-#     """
-#     upload_folder = Path(CRAWLER_CONFIG["UPLOAD_FOLDER"])
-#     processed_folder = Path(CRAWLER_CONFIG["PROCESSED_FOLDER"])
-#
-#     print(f"Polling folder: {upload_folder} for new .las files...")
-#     seen_files = set()
-#
-#     while True:
-#         try:
-#             # Get all .las files in the folder
-#             current_files = {f for f in upload_folder.iterdir() if f.is_file() and f.suffix == ".las"}
-#
-#             # Detect new files
-#             new_files = current_files - seen_files
-#             for file in new_files:
-#                 print(f"New file detected: {file}")
-#
-#                 # Wait for the file to stabilize
-#                 if _wait_for_file_complete(file):
-#                     print(f"File ready for processing: {file}")
-#                     result = convert_las_to_json_task.delay(str(file), str(processed_folder))
-#                     print(f"Task submitted for {file}, Task ID: {result.id}")
-#                 else:
-#                     print(f"File not ready: {file}")
-#
-#             # Update seen files
-#             seen_files = current_files
-#
-#         except Exception as e:
-#             print(f"Error during polling: {e}")
-#
-#         time.sleep(5)  # Poll every 5 seconds
 
 def _wait_for_file_complete(filepath, stabilization_time=10, check_interval=5, abandonment_time=1800):
     """

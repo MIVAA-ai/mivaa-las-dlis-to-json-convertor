@@ -2,6 +2,7 @@ from mappings.HeaderMappings import HeaderMapping
 from utils.DateUtils import DateUtils
 import pandas as pd
 from utils.dlis_utils import parse_value, process_dataframe_lists
+import traceback
 
 def _get_first_matching_value(fields, origins_df):
     """
@@ -86,7 +87,8 @@ class DLISOriginsProcessor:
 
         except Exception as e:
             print(f"Error mapping headers for logical file {self._logical_file_id}: {e}")
-            raise
+            print(traceback.format_exc())  # Prints the entire stack trace
+            return {}
 
     def _extract_origins(self):
         """
@@ -112,7 +114,8 @@ class DLISOriginsProcessor:
 
         except Exception as e:
             print(f"Error while extracting origins for logical file {self._logical_file_id}: {e}")
-            raise
+            print(traceback.format_exc())  # Prints the entire stack trace
+            return pd.DataFrame()
 
     def _process_origin_attributes(self, origin):
         """
@@ -126,17 +129,29 @@ class DLISOriginsProcessor:
         """
         origin_list = []
         for key, value in origin.attributes.items():
+            # print(type(parse_value(origin[key])))
             try:
                 if origin[key] is not None:
-                    if isinstance(origin[key], list) and not origin[key]:
-                        raise ValueError(f"{key} has no value in list")
+                    parsed_value = parse_value(origin[key])
                     origin_list.append({
                         "name": key,
-                        "value": parse_value(origin[key]),
+                        "value": parsed_value,
                         "logical-file-id": self._logical_file_id,
                     })
             except ValueError as ve:
-                print(f"ValueError for key {key}: {ve}")
-            except Exception as e:
-                print(f"Error processing attribute {key}: {e}")
+                origin_list.append({
+                    "name": key,
+                    "value": "Unable to extract",  # Default value when error occurs
+                    "logical-file-id": self._logical_file_id,
+                })
+                print(f"Skipping attribute '{key}' due to error: {ve}")
+                print(traceback.format_exc())  # Prints the entire stack trace
+            except Exception as ve:
+                origin_list.append({
+                    "name": key,
+                    "value": "Unable to extract",  # Default value when error occurs
+                    "logical-file-id": self._logical_file_id,
+                })
+                print(f"Skipping attribute '{key}' due to error: {ve}")
+                print(traceback.format_exc())  # Prints the entire stack trace
         return origin_list

@@ -80,4 +80,4 @@ class DLISProcessorBase:
         except Exception as e:
             print(f"Error processing items for logical file {self._logical_file_id}: {e}")
             print(traceback.format_exc())  # Prints the entire stack trace
-            raise
+            return {}
