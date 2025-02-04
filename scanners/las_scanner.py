@@ -4,12 +4,13 @@
 
 import lasio
 import lasio.examples
-from mappings.LAS2HeaderMappings import HeaderMapping
+from mappings.HeaderMappings import HeaderMapping
 from utils.DateUtils import DateUtils
 from pathlib import Path
 from pydantic import ValidationError
-from mappings.JSONWellLogFormat import JsonWellLogFormat
 import numpy as np
+import traceback
+
 class LasScanner:
     def __init__(self, file):
         self._file = file
@@ -35,14 +36,7 @@ class LasScanner:
             }
         ]
 
-        # Validate against the Pydantic model
-        try:
-            validated_data = JsonWellLogFormat.model_validate(combined_output)
-            return validated_data
-        except ValidationError as e:
-            # Log or handle validation errors
-            print("Validation Error:", e)
-            raise
+        return combined_output
 
     def _extract_bulk_data(self, las_file, null_value):
         """
@@ -71,7 +65,8 @@ class LasScanner:
 
         except Exception as e:
             print(f"Error during bulk data extraction: {e}")
-            raise
+            print(traceback.format_exc())  # Prints the entire stack trace
+            return []
 
     #extracting only the headers of the well log file
     def _extract_header(self, las_file):

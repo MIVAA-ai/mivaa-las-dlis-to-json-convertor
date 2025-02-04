@@ -25,11 +25,14 @@ _summary_folder = _root.joinpath("summary")
 _summary_folder.mkdir(exist_ok=True, parents=True)
 
 # Path for the scanned_file.csv in the 'summary' folder
-csv_path = _summary_folder / "scanned_file.csv"
-header_file_path = _summary_folder / "headers.json"  # Persistent header storage
+las_csv_path = _summary_folder / "las_scanned_files.csv"
+las_header_file_path = _summary_folder / "las_headers.json"  # Persistent header storage
+dlis_csv_path = _summary_folder / "dlis_scanned_files.csv"
+dlis_header_file_path = _summary_folder / "dlis_headers.json"  # Persistent header storage
 
 # Set the CSV_PATH environment variable
-os.environ["CSV_PATH"] = str(csv_path)
+os.environ["LAS_CSV_PATH"] = str(las_csv_path)
+os.environ["DLIS_CSV_PATH"] = str(dlis_csv_path)
 
 # Celery configuration
 broker_url = "filesystem://localhost//"

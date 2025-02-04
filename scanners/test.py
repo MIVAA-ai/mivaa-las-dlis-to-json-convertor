@@ -1,20 +1,36 @@
-from scanners.scanner import Scanner
-from utils.SerialiseJson import JsonSerializable
-import json
+from dlisio import dlis
 
-file_full_path = rf'F:\PyCharmProjects\welllogs-rag\uploads\11_30a-_9Z_dwl_DWL_WIRE_238615014.las'
+import hashlib
+from pathlib import Path
 
+from mappings.WellLogsFormat import WellLogFormat
+from scanners.dlis_scanner import DLISScanner
+from scanners.las_scanner import LasScanner
+from worker.tasks import convert_to_json_task
 
-scanner = Scanner(file_full_path)
-normalised_json = scanner.scan()
-# print(normalised_json)
-# print(JsonSerializable.to_json(normalised_json))
+#pending work to be done before release
+# change the checksum logic to calculate on output files
+# change the print to logger
+# add traceback to exceptions - done
 
-# Replace this with your desired file path
-output_file_path = r'F:\PyCharmProjects\welllogs-rag\sample-data\file.json'
+# file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\samples\11_30a-_9Z_dwl_DWL_WIRE_238615014.las'
+#
+# result = convert_to_json_task(filepath=file_full_path,
+#                               output_folder="F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\processed",
+#                               scanner_cls=LasScanner,
+#                               file_format=WellLogFormat.LAS)
+# print(f"Task submitted for las file {file_full_path}, Task ID: {result}")
 
-# Write the JSON object to the specified file
-with open(output_file_path, 'w') as output_file:
-    json.dump(JsonSerializable.to_json(normalised_json), output_file, indent=4)
+file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\samples\597096_04903521898000_1.dlis'
 
-print(f"JSON written to {output_file_path}")
+print(f"Identified as DLIS: {file_full_path}. Extracting logical files for scanning")
+logical_files = dlis.load(file_full_path)
+print(f"Loaded {len(logical_files)} logical files from DLIS {file_full_path}")
+
+for logical_file in logical_files:
+    result = convert_to_json_task(filepath=file_full_path,
+                                  output_folder="F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\processed",
+                                  scanner_cls=DLISScanner,
+                                  file_format=WellLogFormat.DLIS,
+                                  logical_file=logical_file)
+    print(f"Task submitted for logical file {logical_file.fileheader.id} in DLIS file {file_full_path}, Task ID: {result}")

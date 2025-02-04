@@ -1,139 +1,153 @@
-# tasks.py
 from . import app
-from scanners.scanner import Scanner
 from utils.SerialiseJson import JsonSerializable
-import json
 from worker.result_handler import handle_task_completion
 from celery import chain
-import datetime
-import hashlib
 import os
 from pathlib import Path
-from datetime import datetime
+from utils.file_creation_time import get_file_creation_time
+from utils.calculate_checksum_and_size import calculate_json_checksum
+from utils.IdentifyWellLogFormat import WellLogFormat
+import traceback
 
-def get_file_creation_time(filepath):
+def _extract_curve_names(json_data):
     """
-    Get the file creation time in a cross-platform manner.
-    :param filepath: Path to the file.
-    :return: File creation time as a formatted string.
+    Extracts unique curve names from the given JSON data.
+
+    Args:
+        json_data (list): List of parsed JSON records.
+
+    Returns:
+        str: Comma-separated string of unique curve names.
     """
-    filepath = Path(filepath)
-    try:
-        if os.name == 'nt':  # For Windows
-            creation_time = filepath.stat().st_ctime
-        else:  # For Unix-like systems
-            # Use st_birthtime on systems like macOS; fallback to st_ctime
-            creation_time = getattr(filepath.stat(), 'st_birthtime', filepath.stat().st_ctime)
+    curve_names = set()  # Use a set to automatically remove duplicates
+    for record in json_data:
+        curves = record.get("curves", [])
+        curve_names.update(curve.get("name", "Unknown") for curve in curves)
 
-        # Convert timestamp to human-readable format
-        return datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d %H:%M:%S')
-    except Exception as e:
-        print(f"Error fetching file creation time: {e}")
-        return "Unknown"
+    return ", ".join(curve_names) if curve_names else "None"
 
-def calculate_checksum_and_size(filepath, algorithm="sha256"):
+
+def _consolidate_headers(json_data):
     """
-    Calculate the checksum of a file using the specified algorithm and gather file metadata.
-    :param filepath: Path to the file.
-    :param algorithm: Hash algorithm (default: sha256).
-    :return: Dictionary containing checksum, size, creation date, and creation user.
+    Consolidates headers from multiple JSON records, ensuring:
+    - Duplicate values for the same key are removed.
+    - If a key has multiple different values, they are stored as a semicolon-separated string.
+
+    Args:
+        json_data (list): List of parsed JSON records.
+
+    Returns:
+        dict: Consolidated header dictionary.
     """
-    # Initialize the hash function
-    hash_func = hashlib.new(algorithm)
-    filepath = Path(filepath)
+    consolidated_header = {}
 
-    # Calculate checksum and size
-    file_size = 0
-    with open(filepath, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_func.update(chunk)
-            file_size += len(chunk)
+    for record in json_data:
+        current_header = record.get("header", {})
 
-    # Return metadata
-    return {
-        "checksum": hash_func.hexdigest(),
-        "file_size": file_size,
-    }
+        for key, value in current_header.items():
+            if key in consolidated_header:
+                if consolidated_header[key] != value:
+                    # Convert existing single value to list if not already
+                    if not isinstance(consolidated_header[key], list):
+                        consolidated_header[key] = [consolidated_header[key]]
+                    if value not in consolidated_header[key]:
+                        consolidated_header[key].append(value)
+            else:
+                consolidated_header[key] = value
 
+    # Convert list values back to string format
+    for key, value in consolidated_header.items():
+        if isinstance(value, list):
+            consolidated_header[key] = "; ".join(map(str, value))
+
+    return consolidated_header
 
 @app.task(bind=True)
-def convert_las_to_json_task(self, filepath, output_folder):
+def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format, logical_file=None):
     """
-    Task to convert a LAS file to JSONWellLogFormat.
+    Generic function to convert LAS or DLIS files to JSONWellLogFormat.
+
+    Args:
+        self: Celery task context
+        filepath (Path): Path to the input file
+        output_folder (Path): Path to save the output JSON file
+        scanner_cls: Scanner class (LasScanner or DLISScanner)
+        file_format (WellLogFormat): File format (LAS or DLIS)
+        logical_file (optional): Logical file object for DLIS processing
+
+    Returns:
+        dict: Result metadata of processing
     """
     filepath = Path(filepath).resolve()
     output_folder = Path(output_folder).resolve()
+    creation_time = get_file_creation_time(filepath)
 
-    # Initialize result with default structure
+    # DLIS-specific metadata
+    logical_file_id = str(logical_file.fileheader.id) if logical_file else None
+    output_filename_suffix = logical_file_id if logical_file else ""
+    output_filename = f"{filepath.stem}{output_filename_suffix}.json"
+    output_file_path = output_folder / output_filename
+
+    # Initialize result structure
     result = {
         "status": "ERROR",
-        "task_id": self.request.id,  # Capture the Celery Task ID
-        "file_name": filepath.name if filepath else "Unknown",
-        "input_file_path": str(filepath) if filepath else "Unknown",
-        "input_file_size": "Unknown",
-        "input_file_creation_date": "Unknown",
+        "task_id": self.request.id,
+        "file_name": filepath.name,
+        "input_file_format": file_format.value,
+        "input_file_path": str(filepath),
+        "input_file_size": os.path.getsize(filepath) if filepath.exists() else "N/A",
+        "input_file_creation_date": creation_time,
         "input_file_creation_user": "Unknown",
-        "file_checksum": "Unknown",
-        "output_file": "Unknown",
+        "output_file": str(output_file_path),
+        "output_file_checksum": "Unknown",
         "output_file_size": "Unknown",
         "message": "An error occurred during processing.",
     }
 
     try:
-        # Fetch file metadata
-        print(f"Fetching metadata for {filepath}...")
-        creation_time = get_file_creation_time(filepath)
-        metadata = calculate_checksum_and_size(filepath)
+        print(f"Scanning {file_format.name} file: {filepath}{f' (Logical File: {logical_file_id})' if logical_file else ''}...")
 
-        # Parse the LAS file
-        print(f"Scanning LAS file: {filepath}...")
-        scanner = Scanner(filepath)
+        # Initialize scanner
+        scanner = scanner_cls(file=filepath) if not logical_file else scanner_cls(file_path=filepath,
+                                                                             logical_file=logical_file)
         normalised_json = scanner.scan()
+
+        # Extract Curve Names
+        result["Curve Names"] = _extract_curve_names(normalised_json)
+
+        # Consolidate Headers
+        consolidated_header = _consolidate_headers(normalised_json)
+
+        # Merge result and dynamic headers
+        result.update(consolidated_header)
 
         # Serialize JSON data
         print(f"Serializing scanned data from {filepath}...")
-        json_data = JsonSerializable.to_json(normalised_json)
-        if isinstance(json_data, str):
-            json_data = json.loads(json_data)
+        json_bytes = JsonSerializable.to_json_bytes(normalised_json)
 
         # Save JSON to file
-        filename = filepath.stem + ".json"
-        output_path = output_folder / filename
-        print(f"Saving JSON data to {output_path}...")
-        with open(output_path, "w") as json_file:
-            json.dump(json_data, json_file, indent=4)
+        print(f"Saving JSON data to {output_file_path}...")
+        with open(output_file_path, "wb") as json_file:
+            json_file.write(json_bytes)
 
-        # Update result for success
+        # Calculate checksum of the output JSON file
+        checksum = calculate_json_checksum(output_file_path)
+
         result.update({
             "status": "SUCCESS",
-            "input_file_size": metadata["file_size"],
-            "input_file_creation_date": creation_time,
-            "file_checksum": metadata["checksum"],
-            "output_file": str(output_path),
-            "output_file_size": os.path.getsize(output_path) if output_path.exists() else "N/A",
+            "output_file_checksum": checksum,
+            "output_file_size": os.path.getsize(output_file_path) if output_file_path.exists() else "N/A",
             "message": f"File processed successfully: {filepath}",
         })
 
         print(f"Task completed successfully: {result}")
         # Chain handle_task_completion
-        chain(handle_task_completion.s(result, json_data, self.request.id)).apply_async()
+        chain(handle_task_completion.s(JsonSerializable.to_json(result), self.request.id)).apply_async()
         return result
 
     except Exception as e:
-        # Populate metadata in case of error
-        try:
-            result.update({
-                "input_file_size": os.path.getsize(filepath) if filepath.exists() else "Unknown",
-                "input_file_creation_date": get_file_creation_time(filepath),
-                "file_checksum": calculate_checksum_and_size(filepath).get("checksum", "Unknown"),
-            })
-        except Exception as meta_error:
-            print(f"Error fetching metadata during exception handling: {meta_error}")
-
-        # Set the error message
-        result["message"] = f"Error processing LAS file: {str(e)}"
-
-        print(f"Error processing LAS file: {e}")
-        # Chain handle_task_completion for error handling
-        chain(handle_task_completion.s(result, None, self.request.id)).apply_async()
+        result["status"] = "FAILED"
+        result["message"] = f"Error processing {file_format.name} file: {str(e)}"
+        print(f"Error processing {file_format.name} file: {e}")
+        print(traceback.format_exc())  # Prints the entire stack trace
         return result

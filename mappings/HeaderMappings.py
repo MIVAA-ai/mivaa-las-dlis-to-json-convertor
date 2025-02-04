@@ -9,12 +9,12 @@ class HeaderMapping:
         Key of the dict represents the field in jsonwelllogformat schema
         """
         return {
-            "well": ["WELL", "API"],
-            "field": ["FLD"],
+            "well": ["WELL", "API", "WELL-NAME"],
+            "field": ["FLD", "FIELD-NAME"],
             "country": ["CTRY"],
-            "date": ["DATE"],  # Will be generated dynamically
-            "operator": ["COMP"],
-            "serviceCompany": ["SRVC"],
+            "date": ["DATE", "CREATION-TIME"],  # Will be generated dynamically
+            "operator": ["COMP", "COMPANY"],
+            "serviceCompany": ["SRVC", "PRODUCER-NAME"],
             "elevation": ["ELEV"],
             "startIndex": ["STRT"],
             "endIndex": ["STOP"],
@@ -23,7 +23,7 @@ class HeaderMapping:
             "description": [],
             "wellbore": [],
             "null": ["NULL", "null"],
-            "runNumber": [],  # Not standard in LAS
+            "runNumber": ["RUN-NUMBER"],  # Not standard in LAS
             "source": [],  # Not standard in LAS
             "dataUri": []  # Not standard in LAS
         }
