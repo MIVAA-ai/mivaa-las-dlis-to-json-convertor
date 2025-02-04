@@ -44,7 +44,6 @@ def poll_folder():
 
                 if file_format == WellLogFormat.LAS:
                     print(f"Identified as LAS: {file}")
-                    # result = convert_las_to_json_task(str(file), str(processed_folder))
                     result = convert_to_json_task.delay(
                         filepath=str(file),
                         output_folder=str(processed_folder),
@@ -59,7 +58,6 @@ def poll_folder():
                     print(f"Loaded {len(logical_files)} logical files from DLIS {file}")
 
                     for logical_file in logical_files:
-                        # result = convert_dlis_to_json_task(str(file), str(processed_folder), logical_file)
                         result = convert_to_json_task.delay(
                             filepath=str(file),
                             output_folder=str(processed_folder),

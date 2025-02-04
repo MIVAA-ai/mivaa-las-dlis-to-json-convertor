@@ -187,7 +187,7 @@ def process_dataframe_lists(df):
 
     # Serialize lists into JSON strings
     for col in list_columns:
-        df.loc[:, col] = df[col].apply(lambda x: json.dumps(x) if isinstance(x, (list, np.ndarray, tuple)) else x)
+        df.loc[:, col] = df[col].apply(lambda x: json.dumps(x.tolist()) if isinstance(x, np.ndarray) else json.dumps(x) if isinstance(x, (list, tuple)) else x)
 
     # Deduplicate the DataFrame
     df = df.drop_duplicates(subset=["name"], ignore_index=True)

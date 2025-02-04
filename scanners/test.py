@@ -21,7 +21,7 @@ from worker.tasks import convert_to_json_task
 #                               file_format=WellLogFormat.LAS)
 # print(f"Task submitted for las file {file_full_path}, Task ID: {result}")
 
-file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\samples\595304_34281027861_1.dlis'
+file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\samples\597096_04903521898000_1.dlis'
 
 print(f"Identified as DLIS: {file_full_path}. Extracting logical files for scanning")
 logical_files = dlis.load(file_full_path)
