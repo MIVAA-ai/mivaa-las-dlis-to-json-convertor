@@ -4,7 +4,7 @@ This tool helps you convert your Well Log files in LAS 2.0 and DLIS to JSON Well
 ## Prerequisites
 
 1. **Download the Repository**:
-   - [Clone](https://github.com/MIVAA-ai/mivaa-las-to-json-convertor.git) or download the repository as a [ZIP](https://github.com/MIVAA-ai/mivaa-las-to-json-convertor/archive/refs/heads/main.zip) file.
+   - [Clone](https://github.com/MIVAA-ai/mivaa-las-dlis-to-json-convertor.git) or download the repository as a [ZIP](https://github.com/MIVAA-ai/mivaa-las-to-json-convertor/archive/refs/heads/main.zip) file.
 
 2. **Unzip the Repository**:
    - Extract the downloaded ZIP file to a folder on your system.
