@@ -8,6 +8,15 @@ from utils.file_creation_time import get_file_creation_time
 from utils.calculate_checksum_and_size import calculate_json_checksum
 from utils.IdentifyWellLogFormat import WellLogFormat
 import traceback
+from scanners.las_scanner import LasScanner
+from scanners.dlis_scanner import DLISScanner
+from dlisio import dlis
+
+# Convert class name string back to class reference
+scanner_classes = {
+    WellLogFormat.LAS.value: LasScanner,
+    WellLogFormat.DLIS.value: DLISScanner
+}
 
 def _extract_curve_names(json_data):
     """
@@ -63,7 +72,7 @@ def _consolidate_headers(json_data):
     return consolidated_header
 
 @app.task(bind=True)
-def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format, logical_file=None):
+def convert_to_json_task(self, filepath, output_folder, file_format, logical_file_id=None):
     """
     Generic function to convert LAS or DLIS files to JSONWellLogFormat.
 
@@ -71,9 +80,8 @@ def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format
         self: Celery task context
         filepath (Path): Path to the input file
         output_folder (Path): Path to save the output JSON file
-        scanner_cls: Scanner class (LasScanner or DLISScanner)
         file_format (WellLogFormat): File format (LAS or DLIS)
-        logical_file (optional): Logical file object for DLIS processing
+        logical_file_id (optional): Logical file object name for DLIS processing
 
     Returns:
         dict: Result metadata of processing
@@ -81,10 +89,16 @@ def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format
     filepath = Path(filepath).resolve()
     output_folder = Path(output_folder).resolve()
     creation_time = get_file_creation_time(filepath)
+    logical_file = None
 
     # DLIS-specific metadata
-    logical_file_id = str(logical_file.fileheader.id) if logical_file else None
-    output_filename_suffix = logical_file_id if logical_file else ""
+    if file_format == WellLogFormat.DLIS.value and logical_file_id is not None:
+        logical_files = dlis.load(filepath)
+        for single_logical_file in logical_files:
+            if str(single_logical_file.fileheader.id) == logical_file_id:
+                logical_file = single_logical_file
+
+    output_filename_suffix = logical_file_id if logical_file_id else ""
     output_filename = f"{filepath.stem}{output_filename_suffix}.json"
     output_file_path = output_folder / output_filename
 
@@ -93,7 +107,7 @@ def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format
         "status": "ERROR",
         "task_id": self.request.id,
         "file_name": filepath.name,
-        "input_file_format": file_format.value,
+        "input_file_format": file_format,
         "input_file_path": str(filepath),
         "input_file_size": os.path.getsize(filepath) if filepath.exists() else "N/A",
         "input_file_creation_date": creation_time,
@@ -105,7 +119,9 @@ def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format
     }
 
     try:
-        print(f"Scanning {file_format.name} file: {filepath}{f' (Logical File: {logical_file_id})' if logical_file else ''}...")
+        scanner_cls = scanner_classes[file_format]  # Retrieve actual class
+
+        print(f"Scanning {file_format} file: {filepath}{f' (Logical File: {logical_file_id})' if logical_file else ''}...")
 
         # Initialize scanner
         scanner = scanner_cls(file=filepath) if not logical_file else scanner_cls(file_path=filepath,
@@ -147,7 +163,7 @@ def convert_to_json_task(self, filepath, output_folder, scanner_cls, file_format
 
     except Exception as e:
         result["status"] = "FAILED"
-        result["message"] = f"Error processing {file_format.name} file: {str(e)}"
-        print(f"Error processing {file_format.name} file: {e}")
+        result["message"] = f"Error processing {file_format} file: {str(e)}"
+        print(f"Error processing {file_format} file: {e}")
         print(traceback.format_exc())  # Prints the entire stack trace
         return result

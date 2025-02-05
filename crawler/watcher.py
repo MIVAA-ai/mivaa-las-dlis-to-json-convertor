@@ -1,15 +1,12 @@
 from pathlib import Path
 import time
 import os
-import logging
 from dlisio import dlis
-
-from scanners.dlis_scanner import DLISScanner
-from scanners.las_scanner import LasScanner
 from worker.tasks import convert_to_json_task
 from .crawlerconfig import CRAWLER_CONFIG
 from utils.IdentifyWellLogFormat import IdentifyWellLogFormat
 from mappings.WellLogsFormat import WellLogFormat
+import traceback
 
 def poll_folder():
     """
@@ -47,8 +44,7 @@ def poll_folder():
                     result = convert_to_json_task.delay(
                         filepath=str(file),
                         output_folder=str(processed_folder),
-                        scanner_cls=LasScanner,
-                        file_format=WellLogFormat.LAS
+                        file_format=WellLogFormat.LAS.value
                     )
                     print(f"Task submitted for LAS file {file}, Task ID: {result}")
 
@@ -61,9 +57,8 @@ def poll_folder():
                         result = convert_to_json_task.delay(
                             filepath=str(file),
                             output_folder=str(processed_folder),
-                            scanner_cls=DLISScanner,
-                            file_format=WellLogFormat.DLIS,
-                            logical_file=logical_file
+                            file_format=WellLogFormat.DLIS.value,
+                            logical_file_id=str(logical_file.fileheader.id)
                         )
                         print(f"Task submitted for logical file {logical_file.fileheader.id} in DLIS file {file}, Task ID: {result}")
                 else:
@@ -74,6 +69,7 @@ def poll_folder():
 
         except Exception as e:
             print(f"Error during polling: {e}")
+            print(traceback.format_exc())  # Prints the entire stack trace
 
         time.sleep(5)  # Poll every 5 seconds
 
