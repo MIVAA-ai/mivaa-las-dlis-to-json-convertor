@@ -13,9 +13,6 @@
     A JSON Well Log file consists of one or more log sets each containing a log header, curve definitions and the corresponding measurement data.
     it means that one JSON Well Log file with represent one Logical File.
 """
-from dataclasses import field
-
-from dlisio import dlis
 from scanners.DLISLogicalFile import DLISLogicalFile
 class DLISScanner:
     """

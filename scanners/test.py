@@ -21,16 +21,24 @@ from worker.tasks import convert_to_json_task
 #                               file_format=WellLogFormat.LAS)
 # print(f"Task submitted for las file {file_full_path}, Task ID: {result}")
 
-file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\samples\597096_04903521898000_1.dlis'
+file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\1_3-7_T3__PETROPHYSICS__L0804CPI.DLIS'
 
 print(f"Identified as DLIS: {file_full_path}. Extracting logical files for scanning")
 logical_files = dlis.load(file_full_path)
 print(f"Loaded {len(logical_files)} logical files from DLIS {file_full_path}")
 
 for logical_file in logical_files:
+    # print(str(logical_file.fileheader.id))
+    # print(None)
+    try:
+        logical_file_id = str(logical_file.fileheader.id)
+    except Exception as e:
+        print(f"Error accessing logical file header in {file_full_path}: {e}")
+        continue  # Skip this logical file but continue processing others
+
+    print(f'this executed for {logical_file_id}')
     result = convert_to_json_task(filepath=file_full_path,
                                   output_folder="F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\processed",
-                                  scanner_cls=DLISScanner,
-                                  file_format=WellLogFormat.DLIS,
-                                  logical_file=logical_file)
+                                  file_format=WellLogFormat.DLIS.value,
+                                  logical_file_id=str(logical_file.fileheader.id))
     print(f"Task submitted for logical file {logical_file.fileheader.id} in DLIS file {file_full_path}, Task ID: {result}")
