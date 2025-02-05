@@ -74,7 +74,7 @@ def _consolidate_headers(json_data):
 @app.task(bind=True)
 def convert_to_json_task(self, filepath, output_folder, file_format, logical_file_id=None):
     """
-    Generic function to convert LAS or DLIS files to JSONWellLogFormat.
+    Generic function to convert LAS or 222DLIS files to JSONWellLogFormat.
 
     Args:
         self: Celery task context
@@ -95,8 +95,13 @@ def convert_to_json_task(self, filepath, output_folder, file_format, logical_fil
     if file_format == WellLogFormat.DLIS.value and logical_file_id is not None:
         logical_files = dlis.load(filepath)
         for single_logical_file in logical_files:
-            if str(single_logical_file.fileheader.id) == logical_file_id:
-                logical_file = single_logical_file
+            try:
+                if str(single_logical_file.fileheader.id) == logical_file_id:
+                    logical_file = single_logical_file
+            except Exception as e:
+                print(f"Error accessing logical file header in {filepath}: {e}")
+                continue  # Skip this logical file but continue processing others
+
 
     output_filename_suffix = logical_file_id if logical_file_id else ""
     output_filename = f"{filepath.stem}{output_filename_suffix}.json"

@@ -161,6 +161,29 @@ def parse_value(value):
     except Exception:
         return str(value).strip() if value is not None else None
 
+
+def safe_json_loads(value):
+    """
+    Safely loads a JSON string into a Python object.
+    Returns the original value if loading fails.
+    """
+    if isinstance(value, str):
+        value = value.strip()  # Remove leading/trailing spaces
+
+        if value == "" or value.lower() == "null":  # Handle empty or null values
+            return []
+
+        try:
+            return json.loads(value)  # Try normal JSON loading
+        except json.JSONDecodeError as e:
+            # Attempt to force it into a JSON-compatible string
+            try:
+                return json.loads(json.dumps(value))  # Convert to a valid JSON string
+            except json.JSONDecodeError:
+                return []  # Fallback to an empty list
+
+    return value
+
 def process_dataframe_lists(df):
     """
     Detects columns with lists, serializes them for hashability, deduplicates the DataFrame,
@@ -194,7 +217,7 @@ def process_dataframe_lists(df):
 
     # Deserialize JSON strings back into lists
     for col in list_columns:
-        df.loc[:, col] = df[col].apply(lambda x: json.loads(x) if isinstance(x, str) and x.startswith('[') else x)
+        df.loc[:, col] = df[col].apply(lambda x: safe_json_loads(x))
 
     return df
 
