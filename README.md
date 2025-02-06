@@ -59,7 +59,7 @@ This tool helps you convert your Well Log files in LAS 2.0 and DLIS to JSON Well
 ## Additional Resources
 
 - **Blog**:
-  Read the detailed blog post about this application: []
+  Read the detailed blog post about this application: [https://deepdatawithmivaa.com/2025/02/06/upgrade-your-well-log-data-workflow-vol-2-from-dlis-and-las-2-0-to-json/]
 
 - **JSON Well Log Format**:
   Details about JSON Well Log Format: [https://jsonwelllogformat.org/]
