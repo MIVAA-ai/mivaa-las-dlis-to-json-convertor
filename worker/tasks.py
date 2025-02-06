@@ -11,6 +11,7 @@ import traceback
 from scanners.las_scanner import LasScanner
 from scanners.dlis_scanner import DLISScanner
 from dlisio import dlis
+from utils.logger import Logger
 
 # Convert class name string back to class reference
 scanner_classes = {
@@ -72,7 +73,7 @@ def _consolidate_headers(json_data):
     return consolidated_header
 
 @app.task(bind=True)
-def convert_to_json_task(self, filepath, output_folder, file_format, logical_file_id=None):
+def convert_to_json_task(self, filepath, log_filename, output_folder, file_format, logical_file_id=None):
     """
     Generic function to convert LAS or 222DLIS files to JSONWellLogFormat.
 
@@ -86,9 +87,12 @@ def convert_to_json_task(self, filepath, output_folder, file_format, logical_fil
     Returns:
         dict: Result metadata of processing
     """
+    file_logger = Logger.get_logger(log_filename=log_filename)
+    file_logger.info(f"Task received for processing: {filepath}, Format: {file_format}, Logical File ID: {logical_file_id}")
+
     filepath = Path(filepath).resolve()
     output_folder = Path(output_folder).resolve()
-    creation_time = get_file_creation_time(filepath)
+    creation_time = get_file_creation_time(filepath, log_filename)
     logical_file = None
 
     # DLIS-specific metadata
@@ -99,7 +103,7 @@ def convert_to_json_task(self, filepath, output_folder, file_format, logical_fil
                 if str(single_logical_file.fileheader.id) == logical_file_id:
                     logical_file = single_logical_file
             except Exception as e:
-                print(f"Error accessing logical file header in {filepath}: {e}")
+                file_logger.error(f"Error accessing logical file header in {filepath}: {e}")
                 continue  # Skip this logical file but continue processing others
 
 
@@ -126,7 +130,7 @@ def convert_to_json_task(self, filepath, output_folder, file_format, logical_fil
     try:
         scanner_cls = scanner_classes[file_format]  # Retrieve actual class
 
-        print(f"Scanning {file_format} file: {filepath}{f' (Logical File: {logical_file_id})' if logical_file else ''}...")
+        file_logger.info(f"Scanning {file_format} file: {filepath}{f' (Logical File: {logical_file_id})' if logical_file else ''}...")
 
         # Initialize scanner
         scanner = scanner_cls(file=filepath) if not logical_file else scanner_cls(file_path=filepath,
@@ -143,11 +147,11 @@ def convert_to_json_task(self, filepath, output_folder, file_format, logical_fil
         result.update(consolidated_header)
 
         # Serialize JSON data
-        print(f"Serializing scanned data from {filepath}...")
+        file_logger.info(f"Serializing scanned data from {filepath}...")
         json_bytes = JsonSerializable.to_json_bytes(normalised_json)
 
         # Save JSON to file
-        print(f"Saving JSON data to {output_file_path}...")
+        file_logger.info(f"Saving JSON data to {output_file_path}...")
         with open(output_file_path, "wb") as json_file:
             json_file.write(json_bytes)
 
@@ -161,14 +165,16 @@ def convert_to_json_task(self, filepath, output_folder, file_format, logical_fil
             "message": f"File processed successfully: {filepath}",
         })
 
-        print(f"Task completed successfully: {result}")
+        file_logger.info(f"Task completed successfully: {result}")
         # Chain handle_task_completion
-        chain(handle_task_completion.s(JsonSerializable.to_json(result), self.request.id)).apply_async()
+        chain(handle_task_completion.s(result=JsonSerializable.to_json(result),
+                                       log_filename=log_filename,
+                                       initial_task_id=self.request.id)).apply_async()
         return result
 
     except Exception as e:
         result["status"] = "FAILED"
         result["message"] = f"Error processing {file_format} file: {str(e)}"
-        print(f"Error processing {file_format} file: {e}")
-        print(traceback.format_exc())  # Prints the entire stack trace
+        file_logger.error(f"Error processing {file_format} file: {e}")
+        file_logger.debug(traceback.format_exc())
         return result

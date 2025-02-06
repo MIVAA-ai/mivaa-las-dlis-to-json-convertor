@@ -1,13 +1,15 @@
 from datetime import datetime
 from pathlib import Path
 import os
+from utils.logger import Logger
 
-def get_file_creation_time(filepath):
+def get_file_creation_time(filepath, log_filename):
     """
     Get the file creation time in a cross-platform manner.
     :param filepath: Path to the file.
     :return: File creation time as a formatted string.
     """
+    file_logger = Logger.get_logger(log_filename=log_filename)
     filepath = Path(filepath)
     try:
         if os.name == 'nt':  # For Windows
@@ -19,5 +21,5 @@ def get_file_creation_time(filepath):
         # Convert timestamp to human-readable format
         return datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d %H:%M:%S')
     except Exception as e:
-        print(f"Error fetching file creation time: {e}")
+        file_logger.error(f"Error fetching file creation time: {e}")
         return "Unknown"

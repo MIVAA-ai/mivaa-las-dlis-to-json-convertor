@@ -4,7 +4,7 @@ from .celeryconfig import las_csv_path, dlis_csv_path
 from .celeryconfig import las_header_file_path, dlis_header_file_path
 from . import app
 import json
-import tempfile
+from utils.logger import Logger
 from mappings.WellLogsFormat import WellLogFormat
 
 def load_headers(file_format):
@@ -34,11 +34,12 @@ def save_headers(headers, file_format):
             json.dump(headers, file)  # Save headers as a list
 
 
-def append_row_to_csv(row, global_headers, file_format):
+def append_row_to_csv(row, global_headers, file_format, log_filename):
     """
     Append a row to the CSV file without rewriting the entire file.
     If new headers are added, the file header is updated.
     """
+    file_logger = Logger.get_logger(log_filename)
     # Check if the file exists
     if file_format == WellLogFormat.DLIS.value:
         file_exists = os.path.exists(dlis_csv_path)
@@ -58,18 +59,21 @@ def append_row_to_csv(row, global_headers, file_format):
 
             # If new headers are found, rewrite the header only
             if set(global_headers) != set(current_headers):
-                rewrite_csv_headers(global_headers, csv_path=csv_path)
+                file_logger.info("Rewriting CSV headers due to new fields.")
+                rewrite_csv_headers(global_headers, csv_path=csv_path, log_filename=log_filename)
 
     # Append the row to the CSV file
     with open(csv_path, mode="a", newline="", encoding="utf-8") as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=global_headers)
         writer.writerow(row)
+        file_logger.info("Appended new row to CSV.")
 
-def rewrite_csv_headers(global_headers, csv_path):
+def rewrite_csv_headers(global_headers, csv_path, log_filename):
     """
     Rewrite only the headers of the CSV file without rewriting rows.
     """
     # Read existing rows
+    file_logger = Logger.get_logger(log_filename)
     rows = []
     if os.path.exists(csv_path):
         with open(csv_path, "r", newline="", encoding="utf-8") as csv_file:
@@ -81,13 +85,15 @@ def rewrite_csv_headers(global_headers, csv_path):
         writer = csv.DictWriter(csv_file, fieldnames=global_headers)
         writer.writeheader()
         writer.writerows(rows)
+    file_logger.info("CSV headers updated successfully.")
 
-def update_csv(result):
+def update_csv(result, log_filename):
     """
     Update the CSV file dynamically based on the result and json_data.
     :param result: Metadata about the LAS to JSON conversion.
     :param json_data: Full JSON data structure including headers, parameters, curves, and data (optional).
     """
+    file_logger = Logger.get_logger(log_filename)
     # Load existing headers
     global_headers = load_headers(file_format=result['input_file_format'])
 
@@ -100,14 +106,16 @@ def update_csv(result):
     save_headers(global_headers, file_format=result['input_file_format'])
 
     # Append the row to the CSV file
-    append_row_to_csv(result, global_headers, file_format=result['input_file_format'])
+    append_row_to_csv(result, global_headers, file_format=result['input_file_format'], log_filename=log_filename)
+    file_logger.info(f"CSV updated successfully for {result['file_name']}")
 
 @app.task(bind=True)
-def handle_task_completion(self, result, initial_task_id=None):
+def handle_task_completion(self, result, log_filename, initial_task_id=None):
     """
     Handle the completion of a task by updating the CSV file.
     This function is chained to run after `convert_las_to_json_task`.
     """
+    file_logger = Logger.get_logger(log_filename)
     try:
         # Ensure result is a dictionary
         if not isinstance(result, dict):
@@ -118,11 +126,11 @@ def handle_task_completion(self, result, initial_task_id=None):
         result["task_id"] = combined_task_ids
 
         # Update the CSV file
-        update_csv(result)
-        print(f"CSV updated with task result: {result}")
+        update_csv(result, log_filename)
+        file_logger.info(f"CSV updated with task result: {result}")
 
         # Return a meaningful status
         return f"CSV updated for file: {result['file_name']}"
     except Exception as e:
-        print(f"Error updating CSV: {e}")
+        file_logger.error(f"Error updating CSV: {e}")
         return f"Error updating CSV for file: {result.get('file_name', 'Unknown')}"
