@@ -12,6 +12,7 @@ from scanners.las_scanner import LasScanner
 from scanners.dlis_scanner import DLISScanner
 from dlisio import dlis
 from utils.logger import Logger
+from datetime import datetime
 
 # Convert class name string back to class reference
 scanner_classes = {
@@ -73,7 +74,7 @@ def _consolidate_headers(json_data):
     return consolidated_header
 
 @app.task(bind=True)
-def convert_to_json_task(self, filepath, log_filename, output_folder, file_format, logical_file_id=None):
+def convert_to_json_task(self, filepath, output_folder, file_format, logical_file_id=None):
     """
     Generic function to convert LAS or 222DLIS files to JSONWellLogFormat.
 
@@ -87,12 +88,16 @@ def convert_to_json_task(self, filepath, log_filename, output_folder, file_forma
     Returns:
         dict: Result metadata of processing
     """
-    file_logger = Logger.get_logger(log_filename=log_filename)
+    # instantiating a logger for each file
+    log_filename = f'{os.path.basename(str(filepath))}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+    file_logger = Logger(log_filename).get_logger()
+
     file_logger.info(f"Task received for processing: {filepath}, Format: {file_format}, Logical File ID: {logical_file_id}")
 
     filepath = Path(filepath).resolve()
     output_folder = Path(output_folder).resolve()
-    creation_time = get_file_creation_time(filepath, log_filename)
+
+    creation_time = get_file_creation_time(filepath=filepath, file_logger=file_logger)
     logical_file = None
 
     # DLIS-specific metadata
@@ -133,8 +138,9 @@ def convert_to_json_task(self, filepath, log_filename, output_folder, file_forma
         file_logger.info(f"Scanning {file_format} file: {filepath}{f' (Logical File: {logical_file_id})' if logical_file else ''}...")
 
         # Initialize scanner
-        scanner = scanner_cls(file=filepath) if not logical_file else scanner_cls(file_path=filepath,
-                                                                             logical_file=logical_file)
+        scanner = scanner_cls(file=filepath, logger=file_logger) if not logical_file else scanner_cls(file_path=filepath,
+                                                                                  logical_file=logical_file,
+                                                                                  logger=file_logger)
         normalised_json = scanner.scan()
 
         # Extract Curve Names

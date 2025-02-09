@@ -34,12 +34,11 @@ def save_headers(headers, file_format):
             json.dump(headers, file)  # Save headers as a list
 
 
-def append_row_to_csv(row, global_headers, file_format, log_filename):
+def append_row_to_csv(row, global_headers, file_format, file_logger):
     """
     Append a row to the CSV file without rewriting the entire file.
     If new headers are added, the file header is updated.
     """
-    file_logger = Logger.get_logger(log_filename)
     # Check if the file exists
     if file_format == WellLogFormat.DLIS.value:
         file_exists = os.path.exists(dlis_csv_path)
@@ -60,7 +59,7 @@ def append_row_to_csv(row, global_headers, file_format, log_filename):
             # If new headers are found, rewrite the header only
             if set(global_headers) != set(current_headers):
                 file_logger.info("Rewriting CSV headers due to new fields.")
-                rewrite_csv_headers(global_headers, csv_path=csv_path, log_filename=log_filename)
+                rewrite_csv_headers(global_headers, csv_path=csv_path, file_logger=file_logger)
 
     # Append the row to the CSV file
     with open(csv_path, mode="a", newline="", encoding="utf-8") as csv_file:
@@ -68,12 +67,11 @@ def append_row_to_csv(row, global_headers, file_format, log_filename):
         writer.writerow(row)
         file_logger.info("Appended new row to CSV.")
 
-def rewrite_csv_headers(global_headers, csv_path, log_filename):
+def rewrite_csv_headers(global_headers, csv_path, file_logger):
     """
     Rewrite only the headers of the CSV file without rewriting rows.
     """
     # Read existing rows
-    file_logger = Logger.get_logger(log_filename)
     rows = []
     if os.path.exists(csv_path):
         with open(csv_path, "r", newline="", encoding="utf-8") as csv_file:
@@ -87,13 +85,12 @@ def rewrite_csv_headers(global_headers, csv_path, log_filename):
         writer.writerows(rows)
     file_logger.info("CSV headers updated successfully.")
 
-def update_csv(result, log_filename):
+def update_csv(result, file_logger):
     """
     Update the CSV file dynamically based on the result and json_data.
     :param result: Metadata about the LAS to JSON conversion.
     :param json_data: Full JSON data structure including headers, parameters, curves, and data (optional).
     """
-    file_logger = Logger.get_logger(log_filename)
     # Load existing headers
     global_headers = load_headers(file_format=result['input_file_format'])
 
@@ -106,7 +103,7 @@ def update_csv(result, log_filename):
     save_headers(global_headers, file_format=result['input_file_format'])
 
     # Append the row to the CSV file
-    append_row_to_csv(result, global_headers, file_format=result['input_file_format'], log_filename=log_filename)
+    append_row_to_csv(result, global_headers, file_format=result['input_file_format'], file_logger=file_logger)
     file_logger.info(f"CSV updated successfully for {result['file_name']}")
 
 @app.task(bind=True)
@@ -115,7 +112,7 @@ def handle_task_completion(self, result, log_filename, initial_task_id=None):
     Handle the completion of a task by updating the CSV file.
     This function is chained to run after `convert_las_to_json_task`.
     """
-    file_logger = Logger.get_logger(log_filename)
+    file_logger = Logger(log_filename).get_logger()
     try:
         # Ensure result is a dictionary
         if not isinstance(result, dict):
@@ -126,7 +123,7 @@ def handle_task_completion(self, result, log_filename, initial_task_id=None):
         result["task_id"] = combined_task_ids
 
         # Update the CSV file
-        update_csv(result, log_filename)
+        update_csv(result, file_logger)
         file_logger.info(f"CSV updated with task result: {result}")
 
         # Return a meaningful status

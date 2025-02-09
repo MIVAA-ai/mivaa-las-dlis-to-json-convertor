@@ -8,7 +8,7 @@ class DLISProcessorBase:
     Base class for shared logic between DLIS processors (parameters and equipments).
     """
 
-    def __init__(self, logical_file_id, items, nulls_list=None):
+    def __init__(self, logical_file_id, items, logger, nulls_list=None):
         """
         Initialize the DLISProcessorBase.
 
@@ -19,6 +19,7 @@ class DLISProcessorBase:
         """
         self._logical_file_id = logical_file_id
         self._items = items
+        self._logger = logger  # Store the logger
         self._nulls_list = nulls_list or []
 
     def process_items(self, attributes, units_relevant_columns, related_columns=[]):
@@ -39,12 +40,13 @@ class DLISProcessorBase:
         finally:
             del frame  # Avoid reference cycles
 
+        self._logger.info(f"Processing items for {caller_class} in logical file: {self._logical_file_id}")
 
         # Create a DataFrame using the summary function
-        items_df = summary_dataframe(self._items, **attributes)
+        items_df = summary_dataframe(self._items, self._logger, **attributes)
 
         if items_df.empty:
-            print(f"No items for {caller_class} found for logical file: {self._logical_file_id}")
+            self._logger.warning(f"No items found for {caller_class} in logical file: {self._logical_file_id}")
             return {}
 
         try:
@@ -60,11 +62,11 @@ class DLISProcessorBase:
 
                 unit_column = f"{column}_unit"
                 items_df[unit_column] = extract_units(
-                    metadata=self._items, metadata_df=items_df, column_name=column.upper()
+                    metadata=self._items, metadata_df=items_df, column_name=column.upper(), logger=self._logger
                 )
 
             for column in related_columns:
-                items_df[column] = extract_relationships(metadata_df=items_df, column_name=column)
+                items_df[column] = extract_relationships(metadata_df=items_df, column_name=column, logger=self._logger)
 
             # Add logical file ID
             items_df["logical-file-id"] = self._logical_file_id
@@ -73,11 +75,15 @@ class DLISProcessorBase:
             items_df = items_df[~items_df.isin(self._nulls_list).any(axis=1)]
 
             # Clean and deduplicate the DataFrame
-            items_df = process_dataframe_lists(items_df)
+            items_df = process_dataframe_lists(items_df, logger=self._logger)
+
+            self._logger.info(
+                f"Successfully processed items for {caller_class} in logical file: {self._logical_file_id}")
+
             # Transform the DataFrame into the JSON-like format
-            return extract_metadata(items_df)
+            return extract_metadata(items_df, self._logger)
 
         except Exception as e:
-            print(f"Error processing items for logical file {self._logical_file_id}: {e}")
-            print(traceback.format_exc())  # Prints the entire stack trace
+            self._logger.error(f"Error processing items for logical file {self._logical_file_id}: {e}")
+            self._logger.debug(traceback.format_exc())  # Logs the stack trace for debugging
             return {}

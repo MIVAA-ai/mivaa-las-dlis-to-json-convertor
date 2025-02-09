@@ -3,13 +3,12 @@ from pathlib import Path
 import os
 from utils.logger import Logger
 
-def get_file_creation_time(filepath, log_filename):
+def get_file_creation_time(filepath, file_logger):
     """
     Get the file creation time in a cross-platform manner.
     :param filepath: Path to the file.
     :return: File creation time as a formatted string.
     """
-    file_logger = Logger.get_logger(log_filename=log_filename)
     filepath = Path(filepath)
     try:
         if os.name == 'nt':  # For Windows

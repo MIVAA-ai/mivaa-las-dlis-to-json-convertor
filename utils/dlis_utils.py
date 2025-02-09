@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import json
 
-def summary_dataframe(items, **kwargs):
+def summary_dataframe(items, logger, **kwargs):
     """
     Converts a list of items into a DataFrame with specified attributes.
 
@@ -20,12 +20,12 @@ def summary_dataframe(items, **kwargs):
             try:
                 data[column_name].append(getattr(item, key, None))
             except Exception as e:
-                print(f"Error processing attribute '{key}' for item '{item}': {e}")
+                logger.error(f"Error processing attribute '{key}' for item '{item}': {e}")
                 data[column_name].append(None)
 
     return pd.DataFrame(data)
 
-def extract_metadata(metadata_df):
+def extract_metadata(metadata_df, logger):
     """
     Converts a DLIS parameters DataFrame into the desired JSON-like format with dynamic type handling.
 
@@ -51,9 +51,10 @@ def extract_metadata(metadata_df):
         attribute_values = [parse_value(row[attr]) for attr in attributes]
         metadata_info["objects"][name] = attribute_values
 
+    logger.info(f"Extracted metadata for {len(metadata_df)} rows.")
     return metadata_info
 
-def process_relationship_cell(cell_value):
+def process_relationship_cell(cell_value, logger):
     """
     Processes a single cell value to extract related data (channel names).
 
@@ -76,10 +77,10 @@ def process_relationship_cell(cell_value):
         return [cell_value.name]
 
     # Fallback for unexpected types
-    print(f"Unexpected type: {type(cell_value)}")
+    logger.warning(f"Unexpected type: {type(cell_value)}")
     return []
 
-def extract_relationships(metadata_df, column_name):
+def extract_relationships(metadata_df, column_name, logger):
     """
     Extracts relationships (e.g., channels) from the specified column in the metadata DataFrame
     and transposes the data to match the number of rows in the DataFrame.
@@ -93,12 +94,13 @@ def extract_relationships(metadata_df, column_name):
     """
     # Ensure the column exists in the DataFrame
     if column_name not in metadata_df.columns:
+        logger.error(f"Column '{column_name}' not found in the DataFrame.")
         raise ValueError(f"Column '{column_name}' not found in the DataFrame.")
 
     # Apply the `process_cell` function to the specified column
-    return metadata_df[column_name].apply(process_relationship_cell)
+    return metadata_df[column_name].apply(lambda cell_value: process_relationship_cell(cell_value, logger))
 
-def extract_units(metadata, metadata_df, column_name):
+def extract_units(metadata, metadata_df, column_name, logger):
     """
     Extracts units for a specific equipment attribute and aligns them with the DataFrame index.
 
@@ -124,9 +126,11 @@ def extract_units(metadata, metadata_df, column_name):
             units_column.append(unit)
         except KeyError:
             # If the unit is not found, append None
+            logger.warning(f"No unit found for column '{column_name}' in metadata.")
             units_column.append(None)
         except AttributeError:
             # Handle cases where the 'attic' or column_name might not exist
+            logger.warning(f"No 'attic' or missing '{column_name}' in metadata.")
             units_column.append(None)
 
     return units_column  # Return the list of extracted units
@@ -162,7 +166,7 @@ def parse_value(value):
         return str(value).strip() if value is not None else None
 
 
-def safe_json_loads(value):
+def safe_json_loads(value, logger):
     """
     Safely loads a JSON string into a Python object.
     Returns the original value if loading fails.
@@ -180,11 +184,12 @@ def safe_json_loads(value):
             try:
                 return json.loads(json.dumps(value))  # Convert to a valid JSON string
             except json.JSONDecodeError:
+                logger.warning(f"JSON decode error: {e}. Returning empty list.")
                 return []  # Fallback to an empty list
 
     return value
 
-def process_dataframe_lists(df):
+def process_dataframe_lists(df, logger):
     """
     Detects columns with lists, serializes them for hashability, deduplicates the DataFrame,
     and deserializes them back into lists.
@@ -202,7 +207,7 @@ def process_dataframe_lists(df):
     ]
 
     if not list_columns:
-        print("No list columns detected. Returning original DataFrame.")
+        logger.info("No list columns detected. Returning original DataFrame.")
         return df
 
     # Create a copy of the DataFrame to avoid potential SettingWithCopyWarning
@@ -217,11 +222,11 @@ def process_dataframe_lists(df):
 
     # Deserialize JSON strings back into lists
     for col in list_columns:
-        df.loc[:, col] = df[col].apply(lambda x: safe_json_loads(x))
+        df.loc[:, col] = df[col].apply(lambda x: safe_json_loads(x, logger))
 
     return df
 
-def transform_curves_to_json_well_log_format(curves_data):
+def transform_curves_to_json_well_log_format(curves_data, logger):
     """
     Transforms DLIS curves data into the JSON Well Log format.
 
@@ -237,7 +242,7 @@ def transform_curves_to_json_well_log_format(curves_data):
     for curve_name, curve_details in curves_data["objects"].items():
         # Ensure curve name is present and non-null
         if not curve_name:
-            print("Skipping curve with missing or null name.")
+            logger.warning("Skipping curve with missing or null name.")
             continue
 
         # Extract and transform curve information
@@ -259,4 +264,5 @@ def transform_curves_to_json_well_log_format(curves_data):
         # Append the transformed curve to the list
         transformed_curves.append(curve_data)
 
+    logger.info(f"Transformed {len(transformed_curves)} curves into JSON Well Log format.")
     return transformed_curves

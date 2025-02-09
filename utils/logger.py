@@ -1,91 +1,72 @@
-# import logging
-# import os
-# from crawler.crawlerconfig import CRAWLER_CONFIG
-#
-#
-# def get_file_logger(log_filename: str):
-#     """
-#     Creates a logger for a specific well log file (LAS/DLIS) inside the defined log folder.
-#     """
-#     log_dir = CRAWLER_CONFIG["LOG_FOLDER"]  # Use the configured log folder
-#     os.makedirs(log_dir, exist_ok=True)  # Ensure log directory exists
-#
-#     log_filepath = os.path.join(log_dir, log_filename)
-#
-#     logger = logging.getLogger(log_filename)
-#     logger.setLevel(logging.DEBUG)  # Capture all logs
-#
-#     # File handler
-#     file_handler = logging.FileHandler(log_filepath, mode='a')
-#     file_handler.setLevel(logging.DEBUG)
-#
-#     # Console handler
-#     console_handler = logging.StreamHandler()
-#     console_handler.setLevel(logging.INFO)
-#
-#     # Formatter
-#     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-#     file_handler.setFormatter(formatter)
-#     console_handler.setFormatter(formatter)
-#
-#     if not logger.hasHandlers():
-#         logger.addHandler(file_handler)
-#         logger.addHandler(console_handler)
-#
-#     return logger
-
 import logging
 import os
 
 class Logger:
-    _loggers = {}  # Dictionary to store loggers per file
-    _log_dir = None  # Store log directory only once
-
-    @staticmethod
-    def initialize_log_dir():
-        """ Ensures `_log_dir` is set before using it, creating 'logs' in the project root. """
-        if Logger._log_dir is None:
-            project_root = os.path.dirname(os.path.abspath(__file__))  # Get the current script's directory
-            Logger._log_dir = os.path.join(project_root, "..", "logs")  # Set logs folder in root
-            Logger._log_dir = os.path.abspath(Logger._log_dir)  # Ensure absolute path
-            os.makedirs(Logger._log_dir, exist_ok=True)  # Ensure log directory exists
-
-    @staticmethod
-    def get_logger(log_filename: str):
+    def __init__(self, log_filename: str, log_dir: str = None):
         """
-        Returns a logger for a specific well log file (LAS/DLIS) inside the defined log folder.
-        If the logger already exists, returns the existing one.
+        Initializes a logger instance with file and console handlers.
+
+        Args:
+            log_filename (str): The name of the log file.
+            log_dir (str, optional): The directory where logs should be stored. Defaults to `../logs/`.
         """
-        Logger.initialize_log_dir()  # ✅ Ensure log directory is set before proceeding
+        self.log_filename = log_filename
 
-        # Verify `_log_dir` is set
-        if Logger._log_dir is None:
-            raise ValueError("Logger._log_dir is not initialized.")
+        # Determine log directory (default to '../logs/' if not provided)
+        if log_dir is None:
+            project_root = os.path.dirname(os.path.abspath(__file__))  # Get current script directory
+            self.log_dir = os.path.abspath(os.path.join(project_root, "..", "logs"))  # Default to 'logs' in root
+        else:
+            self.log_dir = os.path.abspath(log_dir)  # Ensure absolute path
 
-        log_filepath = os.path.join(Logger._log_dir, log_filename)
+        os.makedirs(self.log_dir, exist_ok=True)  # Ensure log directory exists
 
-        if log_filename not in Logger._loggers:
-            logger = logging.getLogger(log_filename)
-            logger.setLevel(logging.DEBUG)  # Capture all logs
+        self.log_filepath = os.path.join(self.log_dir, self.log_filename)  # Full path to log file
+        self.logger = logging.getLogger(self.log_filename)  # Unique logger per file
+        self._setup_logger()
 
-            # File handler
-            file_handler = logging.FileHandler(log_filepath, mode='a')
-            file_handler.setLevel(logging.DEBUG)
+    def _setup_logger(self):
+        """ Configures the logger with file and console handlers. """
+        self.logger.setLevel(logging.DEBUG)  # Capture all logs
 
-            # Console handler
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
+        # Ensure we don't duplicate handlers
+        for handler in self.logger.handlers[:]:  # Iterate over a copy of the handlers
+            self.logger.removeHandler(handler)
 
-            # Formatter
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-            file_handler.setFormatter(formatter)
-            console_handler.setFormatter(formatter)
+        # File handler
+        file_handler = logging.FileHandler(self.log_filepath, mode='a')
+        file_handler.setLevel(logging.DEBUG)
 
-            # Add handlers only if they are not already present
-            if not logger.hasHandlers():
-                logger.addHandler(file_handler)
-                logger.addHandler(console_handler)
+        # Console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
 
-            Logger._loggers[log_filename] = logger  # Store logger in dictionary
+        # Formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
 
-        return Logger._loggers[log_filename]  # Return existing or newly created logger
+        # Attach handlers
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+
+        # 🔹 Integrate `dlisio` Logging 🔹
+        dlisio_logger = logging.getLogger('dlisio')
+        dlisio_logger.setLevel(logging.DEBUG)
+
+        for handler in dlisio_logger.handlers[:]:  # Remove any existing handlers
+            dlisio_logger.removeHandler(handler)
+
+        dlisio_logger.addHandler(file_handler)
+
+        # ✅ Force flush on setup (this applies to all handlers)
+        self._flush_handlers()
+
+    def _flush_handlers(self):
+        """ Flush all log handlers to ensure logs are written immediately. """
+        for handler in self.logger.handlers:
+            handler.flush()
+
+    def get_logger(self):
+        """ Returns the configured logger instance. """
+        return self.logger

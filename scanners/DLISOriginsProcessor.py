@@ -43,7 +43,7 @@ class DLISOriginsProcessor:
     Processes the origins in a DLIS logical file and handles extraction and transformation.
     """
 
-    def __init__(self, logical_file_id, origins):
+    def __init__(self, logical_file_id, origins, logger):
         """
         Initialize the DLISOriginsProcessor.
 
@@ -53,6 +53,7 @@ class DLISOriginsProcessor:
         """
         self._logical_file_id = logical_file_id
         self._origins = origins
+        self._logger = logger  # Store the logger
 
     def map_headers(self):
         """
@@ -65,6 +66,8 @@ class DLISOriginsProcessor:
             dict: A dictionary containing the transformed metadata.
         """
         try:
+            self._logger.info(f"Mapping headers for logical file {self._logical_file_id}...")
+
             origins_df = self._extract_origins()
             header_mapping = HeaderMapping.get_default_mapping()
             header = {}
@@ -83,11 +86,13 @@ class DLISOriginsProcessor:
             # Add the logical file ID
             header["name"] = self._logical_file_id
 
+            self._logger.info(f"Successfully mapped headers for logical file {self._logical_file_id}")
+
             return header
 
         except Exception as e:
-            print(f"Error mapping headers for logical file {self._logical_file_id}: {e}")
-            print(traceback.format_exc())  # Prints the entire stack trace
+            self._logger.error(f"Error mapping headers for logical file {self._logical_file_id}: {e}")
+            self._logger.debug(traceback.format_exc())  # Logs the stack trace for debugging
             return {}
 
     def _extract_origins(self):
@@ -98,6 +103,8 @@ class DLISOriginsProcessor:
             pd.DataFrame: A DataFrame containing origins data.
         """
         try:
+            self._logger.info(f"Extracting origins for logical file {self._logical_file_id}...")
+
             # Extract and process origins
             first_origin, *remaining_origins = self._origins
             origin_list = self._process_origin_attributes(first_origin)
@@ -108,14 +115,15 @@ class DLISOriginsProcessor:
             # Convert list to DataFrame and clean
             origins_df = pd.DataFrame(origin_list)
             if not origins_df.empty:
-                origins_df = process_dataframe_lists(origins_df)
+                origins_df = process_dataframe_lists(origins_df, logger=self._logger)
+
+            self._logger.info(f"Successfully extracted origins for logical file {self._logical_file_id}")
 
             return origins_df
 
         except Exception as e:
-            print(f"Error while extracting origins for logical file {self._logical_file_id}: {e}")
-            print(traceback.format_exc())  # Prints the entire stack trace
-            return pd.DataFrame()
+            self._logger.error(f"Error while extracting origins for logical file {self._logical_file_id}: {e}")
+            self._logger.debug(traceback.format_exc())  # Logs the stack trace for debugging            return pd.DataFrame()
 
     def _process_origin_attributes(self, origin):
         """
@@ -129,7 +137,6 @@ class DLISOriginsProcessor:
         """
         origin_list = []
         for key, value in origin.attributes.items():
-            # print(type(parse_value(origin[key])))
             try:
                 if origin[key] is not None:
                     parsed_value = parse_value(origin[key])
@@ -144,14 +151,14 @@ class DLISOriginsProcessor:
                     "value": "Unable to extract",  # Default value when error occurs
                     "logical-file-id": self._logical_file_id,
                 })
-                print(f"Skipping attribute '{key}' due to error: {ve}")
-                print(traceback.format_exc())  # Prints the entire stack trace
+                self._logger.warning(f"Skipping attribute '{key}' due to error: {ve}")
+                self._logger.debug(traceback.format_exc())  # Logs the full traceback
             except Exception as ve:
                 origin_list.append({
                     "name": key,
                     "value": "Unable to extract",  # Default value when error occurs
                     "logical-file-id": self._logical_file_id,
                 })
-                print(f"Skipping attribute '{key}' due to error: {ve}")
-                print(traceback.format_exc())  # Prints the entire stack trace
-        return origin_list
+                self._logger.error(f"Error processing attribute '{key}' in logical file {self._logical_file_id}: {ve}")
+                self._logger.debug(traceback.format_exc())  # Logs the full traceback
+            return origin_list

@@ -12,31 +12,46 @@ import numpy as np
 import traceback
 
 class LasScanner:
-    def __init__(self, file):
+    def __init__(self, file, logger):
         self._file = file
+        self._logger = logger
 
 
     def scan(self):
-        las_file = lasio.read(self._file, engine="normal", encoding="utf-8")
+        """
+         Scans a LAS file and extracts well log data in JSON format.
 
-        # Get different sections of the LAS file in JSON format
-        las_headers = self._extract_header(las_file)
-        null_value = las_headers.get("null", None)  # Use None if NULL is not defined
-        las_curves_headers = self._extract_curve_headers(las_file)
-        las_curves_data = self._extract_bulk_data(las_file, null_value)
-        las_parameters_data = self._extract_parameter_info(las_file)
+         Returns:
+             list: Standardized JSON output of well log data.
+         """
+        self._logger.info(f"Scanning LAS file: {self._file}")
 
-        # Combine all sections into a single JSON structure
-        combined_output = [
-            {
-                "header": las_headers,
-                "parameters": las_parameters_data,
-                "curves": las_curves_headers,
-                "data": las_curves_data
-            }
-        ]
+        try:
+            las_file = lasio.read(self._file, engine="normal", encoding="utf-8")
 
-        return combined_output
+            # Get different sections of the LAS file in JSON format
+            las_headers = self._extract_header(las_file)
+            null_value = las_headers.get("null", None)  # Use None if NULL is not defined
+            las_curves_headers = self._extract_curve_headers(las_file)
+            las_curves_data = self._extract_bulk_data(las_file, null_value)
+            las_parameters_data = self._extract_parameter_info(las_file)
+
+            # Combine all sections into a single JSON structure
+            combined_output = [
+                {
+                    "header": las_headers,
+                    "parameters": las_parameters_data,
+                    "curves": las_curves_headers,
+                    "data": las_curves_data
+                }
+            ]
+
+            self._logger.info(f"Successfully scanned LAS file: {self._file}")
+            return combined_output
+        except Exception as e:
+            self._logger.error(f"Error scanning LAS file {self._file}: {e}")
+            self._logger.debug(traceback.format_exc())
+            return []
 
     def _extract_bulk_data(self, las_file, null_value):
         """
@@ -50,6 +65,8 @@ class LasScanner:
             list: A list of data rows, each being an array of values corresponding to the curves.
         """
         try:
+            self._logger.info(f"Extracting bulk data for LAS file: {self._file}")
+
             # Extract data as a NumPy array for faster processing
             curve_data = np.array([curve.data for curve in las_file.curves])
 
@@ -60,16 +77,19 @@ class LasScanner:
             if null_value is not None:
                 curve_data = np.where(np.isnan(curve_data), null_value, curve_data)
 
+            self._logger.info(f"Successfully extracted bulk data for LAS file: {self._file}")
             # Convert back to a Python list
             return curve_data.tolist()
 
         except Exception as e:
-            print(f"Error during bulk data extraction: {e}")
-            print(traceback.format_exc())  # Prints the entire stack trace
+            self._logger.error(f"Error during bulk data extraction for LAS file {self._file}: {e}")
+            self._logger.debug(traceback.format_exc())
             return []
 
     #extracting only the headers of the well log file
     def _extract_header(self, las_file):
+        self._logger.info(f"Extracting header for LAS file: {self._file}")
+
         #getting the default mapping for the well logs header
         header_mapping = HeaderMapping.get_default_mapping()
 
@@ -99,6 +119,7 @@ class LasScanner:
             if key in 'name':
                 header[key] = Path(self._file).stem
 
+        self._logger.info(f"Successfully extracted header for LAS file: {self._file}")
         return header
 
     def _extract_curve_headers(self, las_file):
@@ -111,6 +132,7 @@ class LasScanner:
         Returns:
             list: A list of curves in the specified JSON schema format.
         """
+        self._logger.info(f"Extracting curve headers for LAS file: {self._file}")
         curves = []
 
         for curve in las_file.curves:
@@ -127,6 +149,7 @@ class LasScanner:
             }
             curves.append(curve_data)
 
+        self._logger.info(f"Successfully extracted curve headers for LAS file: {self._file}")
         return curves
 
     def _extract_parameter_info(self, las_file):
@@ -139,6 +162,8 @@ class LasScanner:
         Returns:
             dict: Parameter information formatted as specified.
         """
+        self._logger.info(f"Extracting parameter information for LAS file: {self._file}")
+
         # Initialize the structure for parameter information
         parameter_info = {
             "attributes": ["value", "unit", "description"],
@@ -156,4 +181,5 @@ class LasScanner:
             # Add parameter to the objects section
             parameter_info["objects"][mnemonic] = [value, unit, description]
 
+        self._logger.info(f"Successfully extracted parameter information for LAS file: {self._file}")
         return parameter_info
