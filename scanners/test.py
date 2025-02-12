@@ -6,9 +6,10 @@ import os
 from utils.logger import Logger
 #
 # #pending work to be done before release
-# # change the checksum logic to calculate on output files
-# # change the print to logger
+# # change the checksum logic to calculate on output files - done
+# # change the print to logger - done
 # # add traceback to exceptions - done
+# add for csv updates in task.py for failed
 #
 # file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\samples\11_30a-_9Z_dwl_DWL_WIRE_238615014.las'
 #
