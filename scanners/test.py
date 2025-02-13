@@ -18,7 +18,7 @@ from utils.logger import Logger
 #                               scanner_cls=LasScanner,
 #                               file_format=WellLogFormat.LAS)
 # print(f"Task submitted for las file {file_full_path}, Task ID: {result}")
-file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\2_4-K-7_A__TEST_FLUID_AND_PRESSURE__FM_PRESS_RAW_RUN400_MWD_6.DLIS'
+file_full_path = rf'F:\PyCharmProjects\mivaa-las-dlis-to-json-convertor\uploads\2_1-A-14_B__WELL_LOG__WL_GR-DEN-NEU_MWD_5.DLIS'
 # log_filename = f'{os.path.basename(str(file_full_path))}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
 # file_logger = Logger.get_logger(log_filename)
 # file_logger.info(f"New file detected: {file_full_path}")

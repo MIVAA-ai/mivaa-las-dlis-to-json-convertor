@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
+import traceback
 
 def summary_dataframe(items, logger, **kwargs):
     """
@@ -18,9 +19,22 @@ def summary_dataframe(items, logger, **kwargs):
     for item in items:
         for key, column_name in kwargs.items():
             try:
-                data[column_name].append(getattr(item, key, None))
+                attr_value = getattr(item, key, None)
+
+                if isinstance(attr_value, np.ndarray):
+                    if attr_value.size == 1:
+                        attr_value = attr_value.item()  # Extract single value
+                    else:
+                        attr_value = ", ".join(map(str, attr_value.flatten()))  # Convert to CSV string
+
+                # Strip leading and trailing spaces if value is a string
+                if isinstance(attr_value, str):
+                    attr_value = attr_value.strip()
+
+                data[column_name].append(attr_value)
+                # data[column_name].append(getattr(item, key, None))
             except Exception as e:
-                logger.error(f"Error processing attribute '{key}' for item '{item}': {e}")
+                logger.warning(f"Known exception from dlisio library. Error processing attribute '{key}' for item '{item}': {e}")
                 data[column_name].append(None)
 
     return pd.DataFrame(data)
@@ -200,6 +214,16 @@ def process_dataframe_lists(df, logger):
     Returns:
         pd.DataFrame: The processed DataFrame with lists preserved after deduplication.
     """
+    # Ensure we are working on a copy to avoid warnings
+    df = df.copy()
+
+    # Convert empty lists ([]) and empty strings ("") to NaN across the entire DataFrame
+    df = df.apply(lambda col: col.map(lambda x: np.nan if x == [] or x == "" else x))
+
+    # Check if 'values' column exists and remove invalid rows
+    if "values" in df.columns:
+        df = df.dropna(subset=["values"])  # Remove rows where 'values' is NaN
+
     # Detect columns with lists
     list_columns = [
         col for col in df.columns
@@ -209,9 +233,6 @@ def process_dataframe_lists(df, logger):
     if not list_columns:
         logger.info("No list columns detected. Returning original DataFrame.")
         return df
-
-    # Create a copy of the DataFrame to avoid potential SettingWithCopyWarning
-    df = df.copy()
 
     # Serialize lists into JSON strings
     for col in list_columns:
